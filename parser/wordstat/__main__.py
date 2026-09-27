@@ -1,5 +1,3 @@
-"""Запуск: python -m parser.wordstat 'кроссовки'."""
-
 import argparse
 
 from . import get_wordstat_count
