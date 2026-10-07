@@ -1,0 +1,80 @@
+:root {
+    --bg: #0B0A10;         
+    --bg-alt: #0F0D15;     
+    --surface: #17141F;    
+    --surface-2: #1E1A29;  
+    --border: #2A2534; 
+
+    --text: #F2F0F7;
+    --text-dim: #9791A8;
+    --text-faint: #66607A;
+    
+    --orange: #FF7A29;      
+    --red: #D62828;         
+    --teal: #29E1B5;
+    --pink: #FF5C77;
+    --gold: #F2B84B;
+
+    --grad: linear-gradient(135deg, var(--orange), var(--red));
+
+    --radius-s: 8px;
+    --radius-m: 14px;
+    --radius-l: 22px;
+
+    --font-display: 'Unbounded', 'Arial Black', sans-serif;
+    --font-body: 'Manrope', -apple-system, 'Segoe UI', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-padding-top: 70px;
+  height: 100%;
+}
+
+body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+::selection {
+  background: var(--orange);
+  color: #fff;
+}
+
+.btn-primary {
+  padding: 9px 18px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 700;
+  background: var(--grad);
+  color: #fff;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(255, 122, 41, 0.35);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.08);
+}
+
