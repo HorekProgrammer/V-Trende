@@ -52,3 +52,52 @@
     grid-template-columns: 1fr;
   }
 }
+
+.grid-2col .mini-card
+{
+  flex: none;
+  width: auto;
+  height: 124px;
+  display: flex;
+}
+
+.grid-2col .mini-cover 
+{
+  aspect-ratio: auto;
+  height: 100%;
+  width: 96px;
+  flex-shrink: 0;
+  font-size: 17px;
+}
+
+.grid-2col .mini-body 
+{
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 11px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.legend-list 
+{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.group-head h2 
+{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.crown-icon 
+{
+  flex-shrink: 0;
+  filter: drop-shadow(0 3px 8px rgba(242, 184, 75, 0.4));
+}
