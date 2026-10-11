@@ -1,15 +1,31 @@
 import './GroupBlock.css';
 import MiniCard from './MiniCard';
+import LegendRow from './LegendRow';
 
-export default function GroupBlock({ title, description, items, onItemClick, variant }) {
+export default function GroupBlock({id, title, description, items, onItemClick, variant, icon }) {
+  const maxWeeks = Math.max(...items.map((item) => item.weeks));
+
   return (
-    <div className="group-block">
+    <div className="group-block" id={id}>
       <div className="group-head">
-        <h2>{title}</h2>
+        <h2>{title}{icon}</h2>
       </div>
       {description && <p className="group-desc">{description}</p>}
 
-      {variant === 'grid' ? (
+      {variant === 'legend' ? 
+      (
+        <div className="legend-list">
+          {items.map((item) => 
+          (
+            <LegendRow
+              key={item.key}
+              item={item}
+              maxWeeks={maxWeeks}
+              onClick={() => onItemClick?.(item)}
+            />
+          ))}
+        </div>
+      ) : variant === 'grid' ? (
         <div className="grid-2col">
           {items.map((item) => (
             <MiniCard

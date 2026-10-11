@@ -1,0 +1,40 @@
+html 
+{
+  scroll-behavior: smooth;
+}
+
+.home-layout 
+{
+  display: flex;
+  align-items: flex-start;
+}
+
+.home 
+{
+  flex: 1;
+  min-width: 0;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 32px 80px;
+}
+
+.hero 
+{
+  border-radius: var(--radius-l);
+  padding: 34px;
+  margin-bottom: 34px;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(120% 160% at 85% -10%, rgba(255, 122, 41, 0.35), transparent 60%),
+    radial-gradient(90% 140% at 100% 120%, rgba(214, 40, 40, 0.28), transparent 55%),
+    var(--surface);
+}
+
+.hero h1 
+{
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.1;
+  max-width: 640px;
+}
