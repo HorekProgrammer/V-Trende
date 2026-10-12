@@ -4,6 +4,7 @@ import GroupBlock from '../components/trends/GroupBlock';
 import Top3Block from '../components/trends/Top3Block';
 import CrownIcon from '../components/icons/CrownIcon';
 import HomeSidebar from '../components/common/HomeSidebar';
+import EmberBackground from '../components/common/EmberBackground';
 import { getGlobalTrends, getNewTrends, getLegendaryTrends, getTop3ByCategory} from '../mocks/mockData';
 import './HomePage.css';
 
@@ -22,6 +23,7 @@ export default function HomePage() {
   
   return (
     <div className="home-layout">
+      <EmberBackground />
       <HomeSidebar sections={SECTIONS} activeId={activeId} onSelect={setActiveId} />
 
       <main className="home">
@@ -32,7 +34,7 @@ export default function HomePage() {
         <GroupBlock
           id="group-global"
           title="Глобальное"
-          description="Самое популярное прямо сейчас во всех категориях: музыка, фильмы, игры и стримеры вместе."
+          description="Самое популярное прямо сейчас во всех категориях — музыка, фильмы, игры и стримеры вместе."
           items={getGlobalTrends(10)}
           onItemClick={openTrend}
         />

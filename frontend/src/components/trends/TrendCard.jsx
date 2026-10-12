@@ -11,7 +11,10 @@ const COVER_GRADIENTS = [
 
 function coverGrad(seedStr) {
   let h = 0;
-  for (const c of seedStr) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  for (const c of seedStr) 
+    {
+      h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    }
   return COVER_GRADIENTS[h % COVER_GRADIENTS.length];
 }
 
