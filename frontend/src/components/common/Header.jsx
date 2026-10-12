@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import './Header.css';
 
 const CATEGORIES = [
@@ -8,7 +8,10 @@ const CATEGORIES = [
     {id: 'streamers', label: 'Стримеры'},
 ];
 
-export default function Header ({ activeCategory }) {
+export default function Header() 
+{
+    const  {pathname} = useLocation();
+    const activeCategory = pathname.startsWith('/category/') ? pathname.split('/')[2] : null;
     return (
         <header className='topbar'>
             <Link to="/" className='logo'>
