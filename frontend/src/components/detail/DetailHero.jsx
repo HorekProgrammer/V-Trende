@@ -2,7 +2,8 @@ import { coverGrad, initials } from '../../utils/trendFormat';
 import { CATEGORY_THEMES } from '../category/categoryThemes';
 import './DetailHero.css';
 
-export default function DetailHero({ item, category }) {
+export default function DetailHero({ item, category }) 
+{
   const theme = CATEGORY_THEMES[category.id];
 
   return (
@@ -24,5 +25,5 @@ export default function DetailHero({ item, category }) {
         <div className="detail-sub">{item.subtitle}</div>
       </div>
     </div>
-  );
+  );ы
 }
