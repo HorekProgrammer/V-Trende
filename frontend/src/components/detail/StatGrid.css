@@ -1,0 +1,36 @@
+.stat-grid 
+{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.stat-box 
+{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  padding: 16px;
+}
+
+.stat-num 
+{
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 22px;
+}
+
+.stat-label 
+{
+  font-size: 11.5px;
+  color: var(--text-faint);
+  margin-top: 5px;
+}
+
+@media (max-width: 900px) 
+{
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
