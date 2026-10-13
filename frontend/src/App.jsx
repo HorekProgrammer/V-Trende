@@ -4,11 +4,13 @@ import HomePage from './pages/HomePage';
 import CategoryPage from './pages/CategoryPage';
 import DetailPage from './pages/DetailPage';
 import AuthPage from './pages/AuthPage';
+import EmberBackground from './components/common/EmberBackground';
 
 function App() {
   return (
     <BrowserRouter>
-    <Header />
+      <EmberBackground />
+      <Header />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/category/:name" element={<CategoryPage />} />
