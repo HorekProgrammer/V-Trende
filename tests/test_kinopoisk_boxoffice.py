@@ -4,6 +4,7 @@ from unittest.mock import patch
 from parser.kinopoisk_boxoffice.kinopoisk_boxoffice_parser import (
     _extract_kinopoisk_id,
     _extract_weeks,
+    _optional_first_number,
     _parse_row,
     get_kinopoisk_boxoffice,
 )
@@ -23,6 +24,7 @@ class KinopoiskBoxOfficeTests(unittest.TestCase):
         ]
 
         result = _parse_row(
+            position=1,
             cells=cells,
             title="Битва моторов",
             href="/film/5505674/",
@@ -46,7 +48,7 @@ class KinopoiskBoxOfficeTests(unittest.TestCase):
     def test_ignores_change_percentages(self):
         cells = [
             "2. -1",
-            "Приключения мамонтёнка. В поисках мамы",
+            "Приключения мамонтёнка",
             "NMG Kinoprokat [2]",
             "74 714 381 ↓24%, ~ 33 961",
             "200 467 604, ~ 91 122",
@@ -56,42 +58,39 @@ class KinopoiskBoxOfficeTests(unittest.TestCase):
         ]
 
         result = _parse_row(
+            position=2,
             cells=cells,
-            title="Приключения мамонтёнка. В поисках мамы",
+            title="Приключения мамонтёнка",
             href="/film/11826673/",
         )
 
-        self.assertEqual(
-            result["position"],
-            2,
+        self.assertEqual(result["position"], 2)
+        self.assertEqual(result["weeks_in_release"], 2)
+        self.assertEqual(result["box_office"], 74714381)
+        self.assertEqual(result["viewers"], 189407)
+        self.assertEqual(result["copies"], 2200)
+
+    def test_allows_missing_number(self):
+        self.assertIsNone(
+            _optional_first_number(
+                "-",
+                "weekend viewers",
+            )
         )
 
-        self.assertEqual(
-            result["weeks_in_release"],
-            2,
+        self.assertIsNone(
+            _optional_first_number(
+                "—",
+                "weekend viewers",
+            )
         )
 
+    def test_extracts_large_weeks_count(self):
         self.assertEqual(
-            result["box_office"],
-            74714381,
-        )
-
-        self.assertEqual(
-            result["viewers"],
-            189407,
-        )
-
-        self.assertEqual(
-            result["copies"],
-            2200,
-        )
-
-    def test_extracts_film_id(self):
-        self.assertEqual(
-            _extract_kinopoisk_id(
-                "/film/420224/"
+            _extract_weeks(
+                "Samokat [1 095]"
             ),
-            420224,
+            1095,
         )
 
     def test_extracts_weeks(self):
@@ -102,9 +101,18 @@ class KinopoiskBoxOfficeTests(unittest.TestCase):
             4,
         )
 
+    def test_extracts_film_id(self):
+        self.assertEqual(
+            _extract_kinopoisk_id(
+                "/film/420224/"
+            ),
+            420224,
+        )
+
     def test_rejects_invalid_row(self):
         with self.assertRaises(RuntimeError):
             _parse_row(
+                position=1,
                 cells=["1.", "Movie"],
                 title="Movie",
                 href="/film/123/",

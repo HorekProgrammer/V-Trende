@@ -12,7 +12,7 @@ BASE_URL = "https://www.kinopoisk.ru/box/"
 
 _FILM_ID_RE = re.compile(r"/film/(\d+)/")
 _FIRST_NUMBER_RE = re.compile(r"\d[\d\s\u00a0]*")
-_WEEKS_RE = re.compile(r"\[(\d+)\]\s*$")
+_WEEKS_RE = re.compile(r"\[([\d\s\u00a0]+)\]\s*$")
 
 
 def _normalize_space(value):
@@ -26,18 +26,27 @@ def _first_number(value, field_name):
 
     match = _FIRST_NUMBER_RE.search(value)
 
-    if match is None:
+    if not match:
         raise RuntimeError(
-            f"Kinopoisk box office row has invalid {field_name}"
+            f"Kinopoisk box office row has invalid "
+            f"{field_name}: {value!r}"
         )
 
-    number = re.sub(
-        r"\s+",
-        "",
-        match.group(0),
+    return int(
+        match.group(0).replace(" ", "")
     )
 
-    return int(number)
+
+def _optional_first_number(value, field_name):
+    value = _normalize_space(value)
+
+    if value in {"", "-", "—"}:
+        return None
+
+    return _first_number(
+        value,
+        field_name,
+    )
 
 
 def _extract_weeks(value):
@@ -45,16 +54,20 @@ def _extract_weeks(value):
 
     match = _WEEKS_RE.search(value)
 
-    if match is None:
+    if not match:
         raise RuntimeError(
-            "Kinopoisk box office row has invalid weeks count"
+            "Kinopoisk box office row has invalid "
+            f"weeks count: {value!r}"
         )
 
-    weeks = int(match.group(1))
+    weeks = int(
+        match.group(1).replace(" ", "")
+    )
 
     if weeks <= 0:
         raise RuntimeError(
-            "Kinopoisk box office row has invalid weeks count"
+            "Kinopoisk box office row has invalid "
+            f"weeks count: {value!r}"
         )
 
     return weeks
@@ -63,80 +76,66 @@ def _extract_weeks(value):
 def _extract_kinopoisk_id(href):
     if not isinstance(href, str):
         raise RuntimeError(
-            "Kinopoisk box office row has invalid film link"
+            "Kinopoisk box office row "
+            "has invalid film link"
         )
 
     match = _FILM_ID_RE.search(href)
 
-    if match is None:
+    if not match:
         raise RuntimeError(
-            "Kinopoisk box office row has invalid film link"
+            "Kinopoisk box office row "
+            "has invalid film link"
         )
 
     return int(match.group(1))
 
 
-def _parse_row(cells, title, href):
+def _parse_row(
+    position,
+    cells,
+    title,
+    href,
+):
     if len(cells) != 8:
         raise RuntimeError(
-            "Kinopoisk box office row must contain 8 cells"
+            "Kinopoisk box office row "
+            "must contain 8 cells"
         )
 
     title = _normalize_space(title)
 
     if not title:
         raise RuntimeError(
-            "Kinopoisk box office row has an empty title"
+            "Kinopoisk box office row "
+            "has an empty title"
         )
-
-    position = _first_number(
-        cells[0],
-        "position",
-    )
-
-    kinopoisk_id = _extract_kinopoisk_id(
-        href
-    )
-
-    weeks = _extract_weeks(
-        cells[2],
-    )
-
-    box_office = _first_number(
-        cells[3],
-        "weekend box office",
-    )
-
-    total_box_office = _first_number(
-        cells[4],
-        "total box office",
-    )
-
-    viewers = _first_number(
-        cells[5],
-        "weekend viewers",
-    )
-
-    total_viewers = _first_number(
-        cells[6],
-        "total viewers",
-    )
-
-    copies = _first_number(
-        cells[7],
-        "copies",
-    )
 
     return {
         "position": position,
         "title": title,
-        "kinopoisk_id": kinopoisk_id,
-        "weeks_in_release": weeks,
-        "box_office": box_office,
-        "total_box_office": total_box_office,
-        "viewers": viewers,
-        "total_viewers": total_viewers,
-        "copies": copies,
+        "kinopoisk_id": _extract_kinopoisk_id(href),
+        "weeks_in_release": _extract_weeks(cells[2]),
+        "box_office": _optional_first_number(
+            cells[3],
+            "weekend box office",
+        ),
+        "total_box_office": _optional_first_number(
+            cells[4],
+            "total box office",
+        ),
+        "viewers": _optional_first_number(
+            cells[5],
+            "weekend viewers",
+        ),
+        "total_viewers": _optional_first_number(
+            cells[6],
+            "total viewers",
+        ),
+        "copies": _optional_first_number(
+            cells[7],
+            "copies",
+        ),
     }
 
 
@@ -149,7 +148,6 @@ def _parse_chart(page):
 
     for index in range(rows.count()):
         row = rows.nth(index)
-
         cells_locator = row.locator("td")
 
         if cells_locator.count() != 8:
@@ -163,14 +161,13 @@ def _parse_chart(page):
         title = film_link.inner_text()
 
         cells = [
-            cells_locator
-            .nth(cell_index)
-            .inner_text()
-            for cell_index in range(8)
+            cells_locator.nth(i).inner_text()
+            for i in range(8)
         ]
 
         result.append(
             _parse_row(
+                position=len(result) + 1,
                 cells=cells,
                 title=title,
                 href=href,
@@ -182,30 +179,10 @@ def _parse_chart(page):
             "Kinopoisk box office chart was not found"
         )
 
-    result.sort(
-        key=lambda item: item["position"]
-    )
-
-    positions = [
-        item["position"]
-        for item in result
-    ]
-
-    expected_positions = list(
-        range(
-            1,
-            len(result) + 1,
-        )
-    )
-
-    if positions != expected_positions:
-        raise RuntimeError(
-            "Kinopoisk box office positions are incomplete"
-        )
-
     viewer_counts = [
         item["viewers"]
         for item in result
+        if item["viewers"] is not None
     ]
 
     if viewer_counts != sorted(
@@ -213,7 +190,8 @@ def _parse_chart(page):
         reverse=True,
     ):
         raise RuntimeError(
-            "Kinopoisk box office chart is not sorted by viewers"
+            "Kinopoisk box office chart "
+            "is not sorted by viewers"
         )
 
     ids = [
@@ -223,22 +201,19 @@ def _parse_chart(page):
 
     if len(ids) != len(set(ids)):
         raise RuntimeError(
-            "Kinopoisk box office contains duplicate film ids"
+            "Kinopoisk box office contains "
+            "duplicate film ids"
         )
 
     return result
 
 
 def _goto(page, url, timeout):
-    timeout_ms = int(
-        timeout * 1000
-    )
-
     try:
         response = page.goto(
             url,
             wait_until="domcontentloaded",
-            timeout=timeout_ms,
+            timeout=int(timeout * 1000),
         )
     except PlaywrightTimeoutError as exc:
         raise RuntimeError(
@@ -288,7 +263,8 @@ def _fetch_chart(
 
             if viewer_links.count() == 0:
                 raise RuntimeError(
-                    "Kinopoisk viewer-sort link was not found"
+                    "Kinopoisk viewer-sort link "
+                    "was not found"
                 )
 
             viewer_href = (
@@ -299,7 +275,8 @@ def _fetch_chart(
 
             if not viewer_href:
                 raise RuntimeError(
-                    "Kinopoisk viewer-sort link is invalid"
+                    "Kinopoisk viewer-sort link "
+                    "is invalid"
                 )
 
             viewer_url = urljoin(
@@ -307,15 +284,10 @@ def _fetch_chart(
                 viewer_href,
             )
 
-            _goto(
-                page,
-                viewer_url,
-                timeout,
-            )
-
             if "/sort/view/" not in viewer_url:
                 raise RuntimeError(
-                    "Kinopoisk viewer-sort URL is invalid"
+                    "Kinopoisk viewer-sort URL "
+                    "is invalid"
                 )
 
             show_all_url = (
@@ -335,9 +307,7 @@ def _fetch_chart(
                     "from the box office page"
                 )
 
-            chart = _parse_chart(
-                page
-            )
+            chart = _parse_chart(page)
 
         finally:
             browser.close()
@@ -353,22 +323,18 @@ def get_kinopoisk_boxoffice(
     timeout=60,
     headless=True,
 ):
-    if limit is not None:
-        if (
-            isinstance(limit, bool)
-            or not isinstance(limit, int)
-            or limit <= 0
-        ):
-            raise ValueError(
-                "limit must be a positive integer or None"
-            )
+    if limit is not None and (
+        isinstance(limit, bool)
+        or not isinstance(limit, int)
+        or limit <= 0
+    ):
+        raise ValueError(
+            "limit must be a positive integer or None"
+        )
 
     if (
         isinstance(timeout, bool)
-        or not isinstance(
-            timeout,
-            (int, float),
-        )
+        or not isinstance(timeout, (int, float))
         or not math.isfinite(timeout)
         or timeout <= 0
     ):
