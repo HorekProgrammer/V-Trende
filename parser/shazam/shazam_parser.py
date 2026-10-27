@@ -105,7 +105,9 @@ def _fetch_chart(timeout: float) -> list[dict]:
 
     try:
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=True)
+            # channel="chromium" — как в парсерах Кинопоиска: полный Chromium
+            # вместо облегчённого headless shell, который ставится не всегда.
+            browser = playwright.chromium.launch(headless=True, channel="chromium")
             try:
                 page = browser.new_page(locale="ru-RU")
                 response = page.goto(CHART_URL, wait_until="domcontentloaded", timeout=timeout * 1000)
@@ -131,8 +133,11 @@ def _fetch_chart(timeout: float) -> list[dict]:
         raise
     except PlaywrightTimeoutError:
         raise RuntimeError("Shazam: превышено время ожидания загрузки чарта.") from None
-    except Error:
-        raise RuntimeError("Shazam: ошибка запуска браузера или загрузки страницы.") from None
+    except Error as error:
+        # Первая строка исходной ошибки Playwright показывает настоящую причину
+        # (сайт недоступен, браузер не установлен, страница закрылась и т. п.).
+        detail = str(error).splitlines()[0] if str(error) else type(error).__name__
+        raise RuntimeError(f"Shazam: ошибка запуска браузера или загрузки страницы: {detail}") from None
 
 
 def get_shazam_chart(limit: int | None = None, *, timeout: float = 30) -> list[dict]:
