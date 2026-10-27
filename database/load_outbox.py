@@ -1,0 +1,356 @@
+"""Загрузка пакетов парсеров из data/outbox/ в PostgreSQL.
+
+    python -m database.load_outbox            # загрузить все пакеты
+    python -m database.load_outbox --keep     # не переносить загруженные файлы
+    python -m database.load_outbox --dir путь # другая папка с пакетами
+
+Каждый файл загружается в отдельной транзакции: либо целиком, либо никак.
+Загруженные файлы переносятся в data/outbox/loaded/, файлы с ошибкой остаются
+на месте. Повторная загрузка того же пакета ничего не дублирует. После загрузки
+пересчитывается материализованный рейтинг mv_category_rank.
+
+Типы пакетов:
+  * чарт (type = "chart")              — позиции за неделю (parser/common/upload.py);
+  * неудачный сбор (status = "failed") — чарт за неделю собрать не удалось;
+  * Wordstat (type = "search_stats")   — частота запросов (parser/wordstat_batch.py).
+"""
+
+import argparse
+import json
+import shutil
+import sys
+from datetime import date, datetime
+from pathlib import Path
+
+from .db import PROJECT_ROOT, DatabaseConfigError, connect
+
+OUTBOX_DIR = PROJECT_ROOT / "data" / "outbox"
+CATEGORIES = {"music", "games", "movies", "streamers"}
+MAX_POSITION = 100
+
+
+class PayloadError(ValueError):
+    """Пакет некорректен; в базу из него ничего не записано."""
+
+
+# ---------- проверка пакета ----------
+
+def _text(container: dict, key: str, *, required: bool = True, max_length: int = 1000) -> str | None:
+    value = container.get(key)
+    if value is None and not required:
+        return None
+    if not isinstance(value, str) or not value.strip() or len(value) > max_length:
+        raise PayloadError(f"Поле {key!r}: ожидается непустая строка до {max_length} символов.")
+    return value.strip()
+
+
+def _week(payload: dict) -> date:
+    try:
+        week = date.fromisoformat(payload["week_start"])
+    except (KeyError, TypeError, ValueError):
+        raise PayloadError("Поле 'week_start': ожидается дата YYYY-MM-DD.") from None
+    if week.weekday() != 0:
+        raise PayloadError("Поле 'week_start' должно быть понедельником.")
+    return week
+
+
+def _collected_at(payload: dict) -> datetime | None:
+    value = payload.get("collected_at")
+    if value is None:
+        return None
+    try:
+        moment = datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        raise PayloadError("Поле 'collected_at': ожидается дата и время ISO 8601.") from None
+    if moment.tzinfo is None:
+        raise PayloadError("Поле 'collected_at' должно содержать часовой пояс.")
+    return moment
+
+
+def _category(container: dict) -> str:
+    category = container.get("category")
+    if category not in CATEGORIES:
+        raise PayloadError(f"Неизвестная категория: {category!r}.")
+    return category
+
+
+def _entries(payload: dict) -> list:
+    entries = payload.get("entries")
+    if not isinstance(entries, list):
+        raise PayloadError("Поле 'entries': ожидается список.")
+    if not all(isinstance(entry, dict) for entry in entries):
+        raise PayloadError("Каждая запись в 'entries' должна быть объектом.")
+    return entries
+
+
+def _chart_entry(entry: dict) -> dict:
+    position = entry.get("position")
+    if type(position) is not int or not 1 <= position <= MAX_POSITION:
+        raise PayloadError(f"Позиция должна быть целым числом от 1 до {MAX_POSITION}: {position!r}.")
+    return {
+        "position": position,
+        "title": _text(entry, "title"),
+        "subtitle": _text(entry, "subtitle", required=False),
+        "genre": _text(entry, "genre", required=False, max_length=100),
+        "external_id": _text(entry, "external_id", required=False, max_length=200),
+        "url": _text(entry, "url", required=False, max_length=2000),
+        "match_key": _text(entry, "match_key"),
+    }
+
+
+# ---------- запись ----------
+
+def _upsert_chart(conn, source: str, name: str, category: str) -> int:
+    return conn.execute(
+        """
+        INSERT INTO charts (source, name, category) VALUES (%s, %s, %s)
+        ON CONFLICT (source, name) DO UPDATE SET category = EXCLUDED.category
+        RETURNING id
+        """,
+        (source, name, category),
+    ).fetchone()[0]
+
+
+def _genre_id(conn, category: str, name: str) -> int:
+    row = conn.execute(
+        "SELECT id FROM genres WHERE category = %s AND name = %s", (category, name)
+    ).fetchone()
+    if row is None:
+        raise PayloadError(f"Жанра {name!r} нет в справочнике категории {category}.")
+    return row[0]
+
+
+def _resolve_trend(conn, source: str, category: str, entry: dict) -> int:
+    """Находит объект: ID на платформе → ссылка → match_key; иначе создаёт новый."""
+    row = None
+    if entry["external_id"] is not None:
+        row = conn.execute(
+            "SELECT trend_id FROM trend_source_items WHERE source = %s AND external_id = %s",
+            (source, entry["external_id"]),
+        ).fetchone()
+    elif entry["url"] is not None:
+        row = conn.execute(
+            "SELECT trend_id FROM trend_source_items "
+            "WHERE source = %s AND url = %s AND external_id IS NULL",
+            (source, entry["url"]),
+        ).fetchone()
+
+    if row is not None:
+        trend_id = row[0]
+    else:
+        trend_id = conn.execute(
+            """
+            INSERT INTO trends (category, title, subtitle, match_key)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (category, match_key)
+            DO UPDATE SET subtitle = COALESCE(trends.subtitle, EXCLUDED.subtitle)
+            RETURNING id
+            """,
+            (category, entry["title"], entry["subtitle"], entry["match_key"]),
+        ).fetchone()[0]
+
+    if entry["external_id"] is not None or entry["url"] is not None:
+        # ON CONFLICT без цели срабатывает и на частичные уникальные индексы.
+        conn.execute(
+            """
+            INSERT INTO trend_source_items (trend_id, source, external_id, url)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT DO NOTHING
+            """,
+            (trend_id, source, entry["external_id"], entry["url"]),
+        )
+
+    if entry["genre"] is not None:
+        # Жанр, уже назначенный объекту, не перезаписывается.
+        conn.execute(
+            "UPDATE trends SET genre_id = %s WHERE id = %s AND genre_id IS NULL",
+            (_genre_id(conn, category, entry["genre"]), trend_id),
+        )
+    return trend_id
+
+
+def load_chart(conn, payload: dict) -> str:
+    source = _text(payload, "source", max_length=100)
+    name = _text(payload, "chart", max_length=200)
+    category = _category(payload)
+    week = _week(payload)
+    collected_at = _collected_at(payload)
+    entries = sorted((_chart_entry(e) for e in _entries(payload)), key=lambda e: e["position"])
+    if not entries:
+        raise PayloadError("В пакете чарта нет позиций.")
+    positions = [e["position"] for e in entries]
+    if len(set(positions)) != len(positions):
+        raise PayloadError("Позиции в пакете повторяются.")
+
+    chart_id = _upsert_chart(conn, source, name, category)
+    run_id = conn.execute(
+        """
+        INSERT INTO chart_runs (chart_id, week_start, status, started_at, finished_at)
+        VALUES (%s, %s, 'success', COALESCE(%s, NOW()), NOW())
+        ON CONFLICT (chart_id, week_start) DO UPDATE
+            SET status = 'success',
+                started_at = EXCLUDED.started_at,
+                finished_at = NOW(),
+                error = NULL
+        RETURNING id
+        """,
+        (chart_id, week, collected_at),
+    ).fetchone()[0]
+    # Повторная загрузка за ту же неделю заменяет позиции запуска целиком.
+    conn.execute("DELETE FROM trend_history WHERE run_id = %s", (run_id,))
+
+    seen, skipped = set(), 0
+    for entry in entries:
+        trend_id = _resolve_trend(conn, source, category, entry)
+        if trend_id in seen:
+            # Два элемента чарта оказались одним объектом: остаётся лучшая позиция.
+            skipped += 1
+            continue
+        seen.add(trend_id)
+        conn.execute(
+            "INSERT INTO trend_history (run_id, trend_id, position) VALUES (%s, %s, %s)",
+            (run_id, trend_id, entry["position"]),
+        )
+    note = f", пропущено повторов: {skipped}" if skipped else ""
+    return f"{source} / {name} за {week}: {len(seen)} позиций{note}"
+
+
+def load_failed_run(conn, payload: dict) -> str:
+    source = _text(payload, "source", max_length=100)
+    name = _text(payload, "chart", max_length=200)
+    category = _category(payload)
+    week = _week(payload)
+    collected_at = _collected_at(payload)
+    error = _text(payload, "error", required=False, max_length=10_000) or "неизвестная ошибка"
+
+    chart_id = _upsert_chart(conn, source, name, category)
+    # Успешный сбор той же недели не затирается неудачным перезапуском.
+    row = conn.execute(
+        """
+        INSERT INTO chart_runs (chart_id, week_start, status, started_at, finished_at, error)
+        VALUES (%s, %s, 'failed', COALESCE(%s, NOW()), NOW(), %s)
+        ON CONFLICT (chart_id, week_start) DO UPDATE
+            SET status = 'failed',
+                started_at = EXCLUDED.started_at,
+                finished_at = NOW(),
+                error = EXCLUDED.error
+            WHERE chart_runs.status <> 'success'
+        RETURNING id
+        """,
+        (chart_id, week, collected_at, error),
+    ).fetchone()
+    if row is None:
+        return f"{source} / {name} за {week}: сбой не записан, неделя уже собрана успешно"
+    return f"{source} / {name} за {week}: записан неудачный сбор"
+
+
+def load_search_stats(conn, payload: dict) -> str:
+    week = _week(payload)
+    collected_at = _collected_at(payload)
+    saved = missing = 0
+    for raw in _entries(payload):
+        category = _category(raw)
+        match_key = _text(raw, "match_key")
+        query = _text(raw, "query", max_length=400)
+        count = raw.get("search_count")
+        if type(count) is not int or count < 0:
+            raise PayloadError(f"search_count должен быть неотрицательным целым: {count!r}.")
+        row = conn.execute(
+            "SELECT id FROM trends WHERE category = %s AND match_key = %s", (category, match_key)
+        ).fetchone()
+        if row is None:
+            missing += 1
+            continue
+        conn.execute(
+            """
+            INSERT INTO trend_search_stats (trend_id, week_start, query, search_count, collected_at)
+            VALUES (%s, %s, %s, %s, COALESCE(%s, NOW()))
+            ON CONFLICT (trend_id, week_start) DO UPDATE
+                SET query = EXCLUDED.query,
+                    search_count = EXCLUDED.search_count,
+                    collected_at = EXCLUDED.collected_at
+            """,
+            (row[0], week, query, count, collected_at),
+        )
+        saved += 1
+    note = f", объектов нет в базе: {missing}" if missing else ""
+    return f"Wordstat за {week}: {saved} значений{note}"
+
+
+def load_payload(conn, payload: dict) -> str:
+    """Записывает один пакет. Вызывать внутри транзакции (см. load_file)."""
+    if not isinstance(payload, dict):
+        raise PayloadError("Пакет должен быть JSON-объектом.")
+    kind = payload.get("type", "chart")
+    if kind == "search_stats":
+        return load_search_stats(conn, payload)
+    if kind != "chart":
+        raise PayloadError(f"Неизвестный тип пакета: {kind!r}.")
+    if payload.get("status") == "failed":
+        return load_failed_run(conn, payload)
+    return load_chart(conn, payload)
+
+
+def refresh_rankings(conn) -> None:
+    """Пересчитывает материализованный рейтинг после загрузки чартов.
+
+    CONCURRENTLY: сайт продолжает читать старую версию, пока строится новая.
+    Нельзя вызывать внутри транзакции.
+    """
+    conn.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_category_rank")
+
+
+def load_file(conn, path: Path) -> str:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise PayloadError(f"Не удалось прочитать JSON: {error}") from None
+    with conn.transaction():
+        return load_payload(conn, payload)
+
+
+def load_outbox(conn, directory: Path = OUTBOX_DIR, *, keep: bool = False,
+                log=print) -> tuple[list[Path], list[Path]]:
+    """Загружает все *.json из папки и обновляет рейтинг. Возвращает (загруженные, с ошибкой)."""
+    loaded, failed = [], []
+    # Сначала старые недели: история складывается в хронологическом порядке.
+    for path in sorted(directory.glob("*.json")):
+        try:
+            message = load_file(conn, path)
+        except Exception as error:  # noqa: BLE001 — ошибка одного файла не останавливает остальные
+            failed.append(path)
+            log(f"[ОШИБКА] {path.name}: {error}")
+            continue
+        loaded.append(path)
+        log(f"[OK] {path.name}: {message}")
+        if not keep:
+            target_dir = directory / "loaded"
+            target_dir.mkdir(exist_ok=True)
+            shutil.move(str(path), target_dir / path.name)
+    if loaded:
+        refresh_rankings(conn)
+        log("Рейтинг категорий пересчитан.")
+    return loaded, failed
+
+
+def main(argv: list[str] | None = None) -> int:
+    cli = argparse.ArgumentParser(description="Загрузить пакеты парсеров в PostgreSQL")
+    cli.add_argument("--dir", type=Path, default=OUTBOX_DIR, help="Папка с пакетами")
+    cli.add_argument("--keep", action="store_true", help="Не переносить загруженные файлы")
+    args = cli.parse_args(argv)
+    if not args.dir.is_dir():
+        print(f"Папки {args.dir} нет: загружать нечего.", file=sys.stderr)
+        return 0
+    try:
+        with connect() as conn:
+            loaded, failed = load_outbox(conn, args.dir, keep=args.keep,
+                                         log=lambda message: print(message, file=sys.stderr))
+    except DatabaseConfigError as error:
+        print(f"Ошибка: {error}", file=sys.stderr)
+        return 1
+    print(f"\nЗагружено: {len(loaded)}, с ошибкой: {len(failed)}.", file=sys.stderr)
+    return 1 if failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
