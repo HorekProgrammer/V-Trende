@@ -4,6 +4,7 @@ import json
 from .kinopoisk_boxoffice_parser import (
     get_kinopoisk_boxoffice,
 )
+from parser.common import add_save_argument, resolve_limit, save_or_exit
 
 
 def main():
@@ -27,11 +28,14 @@ def main():
         help="Show the Chromium browser window",
     )
 
+    add_save_argument(parser)
     args = parser.parse_args()
+
+    limit = resolve_limit("kinopoisk_boxoffice", args.limit, args.save)
 
     try:
         chart = get_kinopoisk_boxoffice(
-            limit=args.limit,
+            limit=limit,
             headless=not args.headed,
         )
     except (ValueError, RuntimeError) as exc:
@@ -47,6 +51,9 @@ def main():
             indent=2,
         )
     )
+
+    if args.save:
+        save_or_exit(parser, "kinopoisk_boxoffice", chart)
 
 
 if __name__ == "__main__":
