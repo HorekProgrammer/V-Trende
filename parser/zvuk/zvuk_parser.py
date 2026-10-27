@@ -55,11 +55,33 @@ def parse_chart_html(html: str) -> list[dict]:
         raise RuntimeError("Звук: некорректные данные или неполный топ-100; возможно, формат сайта изменился.") from None
 
 
-def get_zvuk_chart(limit: int | None = None, *, timeout: float = 30) -> list[dict]:
-    if limit is not None and (type(limit) is not int or limit < 1):
-        raise ValueError("limit должен быть положительным целым числом или None.")
-    if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
-        raise ValueError("timeout должен быть положительным конечным числом.")
+# Ответы, которыми защита сайта отказывает простому запросу.
+_BLOCKED_STATUSES = {401, 403, 429, 503}
+# Минимальное время ожидания в окне браузера: проверка доступа и загрузка чарта.
+BROWSER_TIMEOUT = 120
+
+
+def _fetch_with_browser(timeout: float) -> str:
+    """Открывает чарт в обычном (видимом) окне браузера с постоянным профилем.
+
+    Невидимый (headless) режим проверка доступа Звука не пропускает, а обычное окно
+    проходит её само, без действий пользователя: окно появляется на несколько секунд
+    и закрывается, как только данные чарта загрузились.
+    """
+    from parser.common.browser import BrowserFetchError, fetch_html
+    try:
+        return fetch_html("zvuk", CHART_URL, wait_selector="script#__NEXT_DATA__",
+                          timeout=max(timeout, BROWSER_TIMEOUT), headless=False)
+    except BrowserFetchError as error:
+        raise RuntimeError(f"Звук: чарт не загрузился в окне браузера: {error}.") from None
+
+
+def fetch_chart_html(*, timeout: float = 30, browser_fallback: bool = False,
+                     headed: bool = False) -> str:
+    """HTML страницы чарта: простым запросом, а при проверке доступа — через браузер."""
+    if headed:
+        return _fetch_with_browser(timeout)
+
     request = Request(CHART_URL, headers={
         "User-Agent": "Mozilla/5.0",
         "Accept": "text/html",
@@ -71,9 +93,31 @@ def get_zvuk_chart(limit: int | None = None, *, timeout: float = 30) -> list[dic
     except HTTPError as error:
         status = error.code
         error.close()
+        if browser_fallback and status in _BLOCKED_STATUSES:
+            return _fetch_with_browser(timeout)
         raise RuntimeError(f"Звук: HTTP {status}.") from None
     except (URLError, OSError):
         raise RuntimeError("Звук: ошибка сети или таймаут.") from None
     except UnicodeError:
         raise RuntimeError("Звук: некорректная кодировка страницы.") from None
+    if browser_fallback and 'id="__NEXT_DATA__"' not in html:
+        # Вместо чарта пришла страница проверки доступа — открываем окно браузера.
+        return _fetch_with_browser(timeout)
+    return html
+
+
+def get_zvuk_chart(limit: int | None = None, *, timeout: float = 30,
+                   browser_fallback: bool = False, headed: bool = False) -> list[dict]:
+    """Топ-100 Звука.
+
+    browser_fallback — если сайт не отдал данные простому запросу (проверка доступа),
+    открыть страницу в обычном окне браузера (parser/common/browser.py); окно
+    закрывается само. Нужен компьютер с рабочим столом (Windows, macOS, Linux с экраном).
+    headed — сразу открыть окно браузера, без попытки простого запроса.
+    """
+    if limit is not None and (type(limit) is not int or limit < 1):
+        raise ValueError("limit должен быть положительным целым числом или None.")
+    if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
+        raise ValueError("timeout должен быть положительным конечным числом.")
+    html = fetch_chart_html(timeout=timeout, browser_fallback=browser_fallback, headed=headed)
     return parse_chart_html(html)[:limit]
