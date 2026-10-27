@@ -115,6 +115,14 @@ def parse_ranking_html(html: str, *, expected_start: int | None = None) -> list[
     ]
 
 
+def parse_ranking_positions_html(html: str, *, expected_start: int | None = None) -> list[dict]:
+    """Позиции каналов в рейтинге без статистики: для сохранения в базу."""
+    return [
+        {"position": entry["position"], "channel": entry["channel"], "slug": entry["_slug"]}
+        for entry in _parse_ranking_entries(html, expected_start=expected_start)
+    ]
+
+
 def _page_url(page: int) -> str:
     return RANKING_URL if page == 1 else f"{RANKING_URL}?{urlencode({'page': page})}"
 
@@ -262,19 +270,35 @@ def _fetch_channel_stats(slug: str, timeout: float) -> dict:
         raise RuntimeError(f"{error} Канал: {slug}.") from None
 
 
-def get_russian_twitch_ranking(limit: int = MAX_CHANNELS, *, timeout: float = 30) -> list[dict]:
+def _validate_arguments(limit, timeout) -> None:
     if type(limit) is not int or not 1 <= limit <= MAX_CHANNELS:
         raise ValueError(f"limit должен быть целым числом от 1 до {MAX_CHANNELS}.")
     if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
         raise ValueError("timeout должен быть положительным конечным числом.")
 
+
+def _fetch_ranking(limit: int, timeout: float) -> list[dict]:
     ranking = []
     for page in range(1, math.ceil(limit / PAGE_SIZE) + 1):
         entries = _fetch_ranking_page(page, timeout)
         if len(entries) != PAGE_SIZE:
             raise RuntimeError("TwitchTracker: страница рейтинга загружена не полностью.")
         ranking.extend(entries)
-    ranking = ranking[:limit]
+    return ranking[:limit]
+
+
+def get_russian_twitch_positions(limit: int = MAX_CHANNELS, *, timeout: float = 30) -> list[dict]:
+    """Только позиции каналов в рейтинге — без запросов статистики каждого канала."""
+    _validate_arguments(limit, timeout)
+    return [
+        {"position": entry["position"], "channel": entry["channel"], "slug": entry["_slug"]}
+        for entry in _fetch_ranking(limit, timeout)
+    ]
+
+
+def get_russian_twitch_ranking(limit: int = MAX_CHANNELS, *, timeout: float = 30) -> list[dict]:
+    _validate_arguments(limit, timeout)
+    ranking = _fetch_ranking(limit, timeout)
 
     result = []
     for index, entry in enumerate(ranking):

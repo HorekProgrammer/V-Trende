@@ -14,14 +14,38 @@ CHART_SIZE = 100
 ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
 
 
+# Сессия, сохранённая командой `python -m parser.vk.login` (папка data/ не попадает в git).
+SESSION_FILE = Path(__file__).resolve().parents[2] / "data" / "browser" / "vk_session.json"
+LOGIN_HINT = "войдите командой `python -m parser.vk.login` или укажите VK_* в .env"
+
+
 def _settings() -> dict:
     return {**dotenv_values(ENV_FILE, encoding="utf-8-sig", interpolate=False), **os.environ}
+
+
+def _saved_session() -> dict:
+    """VK_* из файла сессии; пустой словарь, если входа ещё не было."""
+    try:
+        data = json.loads(SESSION_FILE.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return {}
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        raise ValueError(f"Файл сессии VK повреждён; {LOGIN_HINT}.") from None
+    if not isinstance(data, dict):
+        raise ValueError(f"Файл сессии VK повреждён; {LOGIN_HINT}.")
+    return {key: str(value) for key, value in data.items() if key.startswith("VK_")}
+
+
+def _credentials() -> dict:
+    """Значения из .env и окружения важнее сохранённой сессии; сессия заполняет пустые."""
+    explicit = {key: value for key, value in _settings().items() if value}
+    return {**_saved_session(), **explicit}
 
 
 def _validate_cookie(value: str, name: str) -> str:
     value = value.strip()
     if not value:
-        raise ValueError(f"Укажите {name} в .env или окружении.")
+        raise ValueError(f"Нет {name}: {LOGIN_HINT}.")
     if any(ord(char) < 33 or ord(char) > 126 or char in ';,"\\' for char in value):
         raise ValueError(f"{name} содержит недопустимые символы.")
     return value
@@ -38,7 +62,9 @@ def _playlist(response_body: bytes) -> dict:
         return playlist
     except (UnicodeError, json.JSONDecodeError, KeyError, IndexError, TypeError, ValueError):
         raise RuntimeError(
-            "VK Музыка не вернула чарт. Проверьте VK_REMIXSID, VK_REMIXNSID и VK_USER_ID."
+            "VK Музыка не вернула чарт: вероятно, сессия истекла. "
+            "Войдите заново командой `python -m parser.vk.login` "
+            "или обновите VK_REMIXSID, VK_REMIXNSID и VK_USER_ID в .env."
         ) from None
 
 
@@ -96,18 +122,18 @@ def get_vk_chart(limit: int | None = None, *, timeout: float = 30) -> list[dict]
     if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
         raise ValueError("timeout должен быть положительным конечным числом.")
 
-    settings = _settings()
+    settings = _credentials()
     remixsid = _validate_cookie(settings.get("VK_REMIXSID") or "", "VK_REMIXSID")
     remixnsid = _validate_cookie(settings.get("VK_REMIXNSID") or "", "VK_REMIXNSID")
     user_agent = (settings.get("VK_USER_AGENT") or "").strip()
     if not user_agent or "\r" in user_agent or "\n" in user_agent:
-        raise ValueError("Укажите VK_USER_AGENT из того же запроса в .env или окружении.")
+        raise ValueError(f"Нет VK_USER_AGENT: {LOGIN_HINT}.")
     try:
         user_id = int(settings.get("VK_USER_ID") or "")
         if user_id <= 0:
             raise ValueError
     except ValueError:
-        raise ValueError("Укажите положительный VK_USER_ID в .env или окружении.") from None
+        raise ValueError(f"Нет корректного VK_USER_ID: {LOGIN_HINT}.") from None
 
     cookie = f"remixsid={remixsid}; remixnsid={remixnsid}"
     first_body = _request({
