@@ -74,9 +74,11 @@ class VkTests(unittest.TestCase):
         self.assertEqual(first_request.get_header("Cookie"), "remixsid=session-value; remixnsid=network-session-value")
         self.assertNotIn("httoken", first_request.get_header("Cookie"))
 
+    # Сохранённая сессия на машине разработчика не должна влиять на тест.
+    @patch("parser.vk.vk_parser._saved_session", return_value={})
     @patch("parser.vk.vk_parser._settings")
     @patch("parser.vk.vk_parser.urlopen")
-    def test_invalid_configuration_and_arguments(self, opened, settings):
+    def test_invalid_configuration_and_arguments(self, opened, settings, _session):
         settings.return_value = {}
         for limit in (0, -1, True, "5"):
             with self.assertRaises(ValueError):
