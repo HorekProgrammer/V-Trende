@@ -24,6 +24,7 @@ ENV_FILE = PROJECT_ROOT / ".env"
 OUTBOX_DIR = PROJECT_ROOT / "data" / "outbox"
 ENDPOINT_PATH = "/api/v1/internal/update-trends"
 SEARCH_STATS_ENDPOINT_PATH = "/api/v1/internal/update-search-stats"
+PUBLISH_RANKINGS_ENDPOINT_PATH = "/api/v1/internal/publish-rankings"
 # Москва живёт в UTC+3 без перехода на летнее время; фиксированный сдвиг
 # не требует пакета tzdata на Windows.
 MOSCOW_TZ = timezone(timedelta(hours=3), "MSK")
@@ -109,9 +110,9 @@ def _endpoint(payload: dict) -> str:
     return SEARCH_STATS_ENDPOINT_PATH if payload.get("type") == "search_stats" else ENDPOINT_PATH
 
 
-def _post(payload: dict, backend_url: str, token: str, timeout: float) -> str:
+def _post_to(payload: dict, endpoint: str, backend_url: str, token: str, timeout: float) -> str:
     request = Request(
-        backend_url.rstrip("/") + _endpoint(payload),
+        backend_url.rstrip("/") + endpoint,
         data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
         headers={
             "Content-Type": "application/json; charset=utf-8",
@@ -133,6 +134,10 @@ def _post(payload: dict, backend_url: str, token: str, timeout: float) -> str:
     if "entries" in payload:
         return f"отправлено в бэкенд: {len(payload['entries'])} позиций"
     return "отправлено в бэкенд"
+
+
+def _post(payload: dict, backend_url: str, token: str, timeout: float) -> str:
+    return _post_to(payload, _endpoint(payload), backend_url, token, timeout)
 
 
 def _file_stem(payload: dict) -> str:
@@ -166,6 +171,19 @@ def save_payload(payload: dict, *, timeout: float = 30, outbox_dir: Path | None 
     if not token:
         raise SaveError("укажите INTERNAL_API_TOKEN в .env или окружении.")
     return _post(payload, backend_url, token, timeout)
+
+
+def publish_rankings(*, timeout: float = 120) -> str:
+    """Публикует заранее собранную неделю одним пересчётом рейтингов."""
+    settings = _settings()
+    backend_url = (settings.get("BACKEND_URL") or "").strip()
+    if not backend_url:
+        raise SaveError("для публикации рейтинга укажите BACKEND_URL в .env или окружении.")
+    token = (settings.get("INTERNAL_API_TOKEN") or "").strip()
+    if not token:
+        raise SaveError("укажите INTERNAL_API_TOKEN в .env или окружении.")
+    _post_to({}, PUBLISH_RANKINGS_ENDPOINT_PATH, backend_url, token, timeout)
+    return "рейтинг опубликован"
 
 
 def save_chart(chart: Chart | str, items: list[dict], *, week: date | None = None,

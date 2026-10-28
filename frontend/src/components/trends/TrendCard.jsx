@@ -22,7 +22,9 @@ export default function TrendCard({ item, onClick }) {
         <div className="row-title">{item.title}</div>
         <div className="row-sub">{item.subtitle}</div>
       </div>
-      <div className="row-views">{fmtSearches(item.searchCount)}</div>
+      <div className="row-views">
+        {item.score == null ? fmtSearches(item.searchCount) : `${item.score.toFixed(1)} балла`}
+      </div>
       <div className="row-trend">
            <TrendBadge prevRank={item.prevRank} rank={item.rank} isNew={item.isNew} />
       </div>

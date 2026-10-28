@@ -3,3 +3,4 @@ playwright==1.63.0
 psycopg[binary]==3.2.9
 fastapi>=0.115,<1
 uvicorn>=0.30,<1
+httpx2>=2,<3

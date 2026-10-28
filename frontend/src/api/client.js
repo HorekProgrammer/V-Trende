@@ -21,7 +21,7 @@ export async function apiGet(path, signal)
       if (typeof body.detail === 'string') message = body.detail;
     } catch 
     {
-
+      // Если тело ответа не JSON, оставляем универсальное сообщение HTTP.
     }
     throw new ApiError(res.status, message);
   }

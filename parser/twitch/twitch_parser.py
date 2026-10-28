@@ -2,8 +2,10 @@ import base64
 import json
 import math
 import re
+from datetime import datetime, timedelta, timezone
 from html import unescape
 from html.parser import HTMLParser
+from pathlib import Path
 from time import sleep
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlparse
@@ -17,6 +19,8 @@ PERIOD_DAYS = 7
 CHANNEL_DELAY_SECONDS = 1.0
 RATE_LIMIT_RETRIES = 3
 RATE_LIMIT_DELAY_SECONDS = 30
+CACHE_DIR = Path(__file__).resolve().parents[2] / "data" / "cache" / "twitch"
+MOSCOW_TZ = timezone(timedelta(hours=3))
 
 _HEADERS = {
     "User-Agent": "Mozilla/5.0",
@@ -296,18 +300,64 @@ def get_russian_twitch_positions(limit: int = MAX_CHANNELS, *, timeout: float = 
     ]
 
 
-def get_russian_twitch_ranking(limit: int = MAX_CHANNELS, *, timeout: float = 30) -> list[dict]:
+def _weekly_cache_path() -> Path:
+    today = datetime.now(MOSCOW_TZ).date()
+    week = today - timedelta(days=today.weekday())
+    return CACHE_DIR / f"{week.isoformat()}.json"
+
+
+def _load_stats_cache(path: Path) -> dict[str, dict]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _save_stats_cache(path: Path, cache: dict[str, dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
+    temporary.replace(path)
+
+
+def get_russian_twitch_ranking(
+    limit: int = MAX_CHANNELS,
+    *,
+    timeout: float = 30,
+    cache_path: Path | None = None,
+) -> list[dict]:
     _validate_arguments(limit, timeout)
     ranking = _fetch_ranking(limit, timeout)
+    cache = _load_stats_cache(cache_path) if cache_path is not None else {}
 
     result = []
     for index, entry in enumerate(ranking):
-        if index:
+        slug = entry["_slug"]
+        stats = cache.get(slug)
+        required = {
+            "hours_streamed", "average_viewers", "peak_viewers", "hours_watched",
+            "followers_gained", "followers_per_hour",
+        }
+        if not isinstance(stats, dict) or not required.issubset(stats):
+            stats = None
+        if stats is None and index:
             sleep(CHANNEL_DELAY_SECONDS)
-        stats = _fetch_channel_stats(entry["_slug"], timeout)
+        if stats is None:
+            stats = _fetch_channel_stats(slug, timeout)
+            if cache_path is not None:
+                cache[slug] = stats
+                _save_stats_cache(cache_path, cache)
         result.append({
+            "position": entry["position"],
             "channel": entry["channel"],
+            "slug": slug,
             "total_followers": entry["total_followers"],
             **stats,
         })
     return result
+
+
+def get_cached_russian_twitch_ranking(limit: int = MAX_CHANNELS, *, timeout: float = 30) -> list[dict]:
+    """Полный недельный рейтинг с поканальным возобновлением после сетевого сбоя."""
+    return get_russian_twitch_ranking(limit, timeout=timeout, cache_path=_weekly_cache_path())

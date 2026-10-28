@@ -1,11 +1,13 @@
-"""Read-only FastAPI application serving trend data from PostgreSQL."""
+"""FastAPI application serving trends and accepting parser payloads."""
 
+import hmac
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from database.db import connect, settings
+from database.load_outbox import PayloadError, load_payload, refresh_rankings
 
 from . import repository
 
@@ -29,6 +31,35 @@ def database():
 
 
 Db = Annotated[object, Depends(database)]
+
+
+def require_internal_token(
+    authorization: Annotated[str | None, Header()] = None,
+) -> None:
+    expected = (settings().get("INTERNAL_API_TOKEN") or "").strip()
+    scheme, _, supplied = (authorization or "").partition(" ")
+    if (
+        not expected
+        or scheme.lower() != "bearer"
+        or not supplied
+        or not hmac.compare_digest(supplied, expected)
+    ):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Неверный внутренний токен.")
+
+
+InternalAuth = Annotated[None, Depends(require_internal_token)]
+
+
+def ingest_payload(payload: dict, conn, expected_type: str) -> dict:
+    actual_type = payload.get("type", "chart")
+    if actual_type != expected_type:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Неверный тип пакета.")
+    try:
+        with conn.transaction():
+            message = load_payload(conn, payload)
+    except PayloadError as error:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)) from None
+    return {"message": message}
 
 
 @app.get("/api/v1/health")
@@ -98,3 +129,28 @@ def get_trend_history(trend_id: int, conn: Db):
     if history is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Тренд не найден.")
     return history
+
+
+@app.post("/api/v1/internal/update-trends")
+def update_trends(payload: dict, conn: Db, _auth: InternalAuth):
+    return ingest_payload(payload, conn, "chart")
+
+
+@app.post("/api/v1/internal/update-search-stats")
+def update_search_stats(payload: dict, conn: Db, _auth: InternalAuth):
+    # Автоматический воскресный сбор сохраняет данные заранее, но публикует их
+    # отдельной задачей ровно в понедельник 00:00 МСК.
+    publish = payload.get("publish", True)
+    if type(publish) is not bool:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Поле publish должно быть boolean.")
+    result = ingest_payload(payload, conn, "search_stats")
+    if publish:
+        refresh_rankings(conn)
+    result["rankingsRefreshed"] = publish
+    return result
+
+
+@app.post("/api/v1/internal/publish-rankings")
+def publish_rankings(conn: Db, _auth: InternalAuth):
+    refresh_rankings(conn)
+    return {"message": "Рейтинг опубликован.", "rankingsRefreshed": True}

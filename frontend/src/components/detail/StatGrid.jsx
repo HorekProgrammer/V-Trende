@@ -12,6 +12,7 @@ export default function StatGrid({ item })
 {
   const stats = [
     { value: `#${item.rank}`, label: 'Текущая позиция' },
+    { value: item.score == null ? '—' : item.score.toFixed(1), label: 'Итоговый рейтинг' },
     { value: `#${item.peak}`, label: 'Пиковая позиция' },
     { value: item.weeks, label: 'Недель в чарте' },
     searchStat(item.searchCount),

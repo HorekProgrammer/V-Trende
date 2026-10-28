@@ -81,16 +81,25 @@ class MigrationTests(DatabaseTestCase):
     def test_new_migration_is_applied_and_failed_one_is_rolled_back(self):
         from database.migrate import MIGRATIONS_DIR, MigrationError, migrate
         with tempfile.TemporaryDirectory() as tmp:
-            for path in MIGRATIONS_DIR.glob("*.sql"):
+            migration_paths = list(MIGRATIONS_DIR.glob("*.sql"))
+            for path in migration_paths:
                 (Path(tmp) / path.name).write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
-            (Path(tmp) / "005_extra.sql").write_text("CREATE TABLE extra (id INT);", encoding="utf-8")
-            self.assertEqual(migrate(self.conn, directory=Path(tmp)), ["005"])
-            (Path(tmp) / "006_broken.sql").write_text(
+            last_version = max(int(path.name.split("_", 1)[0]) for path in migration_paths)
+            extra_version = f"{last_version + 1:03d}"
+            broken_version = f"{last_version + 2:03d}"
+            (Path(tmp) / f"{extra_version}_extra.sql").write_text(
+                "CREATE TABLE extra (id INT);", encoding="utf-8"
+            )
+            self.assertEqual(migrate(self.conn, directory=Path(tmp)), [extra_version])
+            (Path(tmp) / f"{broken_version}_broken.sql").write_text(
                 "CREATE TABLE half_done (id INT); SELECT * FROM no_such_table;", encoding="utf-8")
             with self.assertRaises(MigrationError):
                 migrate(self.conn, directory=Path(tmp))
         self.assertIsNone(self.scalar("SELECT to_regclass('half_done')"))
-        self.assertFalse(self.scalar("SELECT EXISTS (SELECT 1 FROM schema_migrations WHERE version = '006')"))
+        self.assertFalse(self.scalar(
+            "SELECT EXISTS (SELECT 1 FROM schema_migrations WHERE version = %s)",
+            (broken_version,),
+        ))
 
     def test_baseline_for_database_created_from_schema_sql(self):
         from database.migrate import MIGRATIONS_DIR, migrate
@@ -98,7 +107,7 @@ class MigrationTests(DatabaseTestCase):
         self.conn.execute("CREATE SCHEMA public")
         # База, созданная вручную старым schema.sql (= миграция 001).
         self.conn.execute((MIGRATIONS_DIR / "001_init.sql").read_text(encoding="utf-8"))
-        self.assertEqual(migrate(self.conn, baseline="001"), ["002", "003", "004"])
+        self.assertEqual(migrate(self.conn, baseline="001"), ["002", "003", "004", "005", "006"])
 
     def test_genres_are_seeded_and_category_is_enforced(self):
         self.assertEqual(self.scalar("SELECT COUNT(*) FROM genres"), 20)
@@ -208,6 +217,20 @@ class LoaderTests(DatabaseTestCase):
         self.load(stats)
         self.assertEqual(self.rows("SELECT search_count FROM trend_search_stats"), [(700,)])
 
+    def test_twitch_weekly_metrics_are_saved(self):
+        channel = {
+            "position": 1, "channel": "Streamer", "slug": "streamer",
+            "total_followers": 100_000, "hours_streamed": 40.5,
+            "average_viewers": 2_000, "peak_viewers": 5_000,
+            "hours_watched": 81_000, "followers_gained": 500,
+            "followers_per_hour": 12.346,
+        }
+        self.load(build_payload("twitch", [channel], week=W1))
+        self.assertEqual(
+            self.rows("SELECT hours_watched, average_viewers, followers_gained FROM twitch_weekly_stats"),
+            [(81_000, 2_000, 500)],
+        )
+
     def test_load_outbox_moves_good_files_and_keeps_bad(self):
         from database.load_outbox import load_outbox
         with tempfile.TemporaryDirectory() as tmp:
@@ -266,8 +289,9 @@ class RankingTests(DatabaseTestCase):
         key = self.scalar("SELECT match_key FROM trends WHERE title = 'Трек 2'")
         self.load({"type": "search_stats", "week_start": W2.isoformat(), "entries": [
             {"category": "music", "match_key": key, "query": "q", "search_count": 10_000}]})
+        self.refresh()
         feed = self.rows("SELECT feed_rank, title, search_count FROM v_main_feed ORDER BY feed_rank")
-        self.assertEqual(feed[0], (1, "Трек 2", 10_000))   # Wordstat поднимает его над треком 1
+        self.assertEqual(feed[0][1], "Трек 1")  # Wordstat весит 15% и не перекрывает лидерство в чартах
         trend = self.scalar("SELECT id FROM trends WHERE title = 'Трек 2'")
         history = self.rows("SELECT week_start, category_rank, search_count FROM v_trend_history "
                             "WHERE trend_id = %s ORDER BY week_start", (trend,))
@@ -285,6 +309,20 @@ class RankingTests(DatabaseTestCase):
         row = self.rows("SELECT prev_rank, weeks_in_top FROM v_category_top_latest WHERE title = 'Трек 1'")
         self.assertEqual(row, [(None, 3)])
 
+    def test_prepared_week_is_hidden_until_refresh(self):
+        future = W3
+        self.load(build_payload("zvuk", tracks((1, 1)), week=future))
+        self.load(build_payload("vk", tracks((1, 1)), week=future))
+        self.assertEqual(
+            self.rows("SELECT DISTINCT week_start FROM v_category_top_latest"),
+            [(W2,)],
+        )
+        self.refresh()
+        self.assertEqual(
+            self.rows("SELECT DISTINCT week_start FROM v_category_top_latest"),
+            [(future,)],
+        )
+
 
 class SeedTests(DatabaseTestCase):
     def test_seed_fills_every_category_within_limits(self):
@@ -297,15 +335,14 @@ class SeedTests(DatabaseTestCase):
             self.assertLessEqual(max_rank, limits[category])
         self.assertGreater(self.scalar("SELECT COUNT(*) FROM trend_search_stats"), 0)
 
-    def test_wordstat_batch_picks_only_top_trends_without_stats(self):
+    def test_wordstat_batch_picks_all_chart_trends_without_stats(self):
         from database.seed import seed
         from parser.wordstat_batch import pending_trends
         seed(self.conn, weeks=1, random_seed=3, last_week=W3)
         self.conn.execute("DELETE FROM trend_search_stats")
         pending = pending_trends(self.conn, W3)
         self.assertEqual(len(pending), self.scalar(
-            "SELECT COUNT(*) FROM mv_category_rank WHERE week_start = %s", (W3,)))
-        self.assertLessEqual(len(pending), 300)
+            "SELECT COUNT(DISTINCT trend_id) FROM v_chart_entries WHERE week_start = %s", (W3,)))
         self.conn.execute("UPDATE trends SET search_query = 'своя фраза' WHERE match_key = %s",
                           (pending[0]["match_key"],))
         self.assertEqual(pending_trends(self.conn, W3)[0]["query"], "своя фраза")

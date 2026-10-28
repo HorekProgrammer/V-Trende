@@ -23,15 +23,13 @@ def main():
     args = cli.parse_args()
     if args.limit is not None and args.limit < 1:
         cli.error("--limit должен быть положительным")
+    if args.save and args.html:
+        cli.error("--html нельзя использовать с --save: в HTML рейтинга нет недельной статистики")
 
     try:
         if args.save:
-            # Для базы нужны только позиции: статистику каждого канала не запрашиваем.
             limit = resolve_limit("twitch", args.limit, save=True)
-            if args.html:
-                channels = parse_ranking_positions_html(args.html.read_text(encoding="utf-8"))[:limit]
-            else:
-                channels = get_russian_twitch_positions(limit)
+            channels = get_russian_twitch_ranking(limit)
         else:
             limit = args.limit if args.limit is not None else 150
             if args.html:

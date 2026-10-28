@@ -10,7 +10,8 @@ CATEGORY_LABELS = {
 }
 
 CARD_COLUMNS = """
-    week_start, category, rank, trend_id, title, subtitle, genre,
+    week_start, category, rank, score, source_score, wordstat_score,
+    trend_id, title, subtitle, genre,
     prev_rank, peak_rank, weeks_in_top, first_seen_week, is_new, search_count
 """
 
@@ -33,6 +34,9 @@ def card(record: dict) -> dict:
         "categoryLabel": CATEGORY_LABELS[record["category"]],
         "weekStart": record["week_start"].isoformat(),
         "rank": record["rank"],
+        "score": float(record["score"]),
+        "sourceScore": float(record["source_score"]),
+        "wordstatScore": float(record["wordstat_score"]),
         "prevRank": record["prev_rank"],
         "peak": record["peak_rank"],
         "weeks": record["weeks_in_top"],
@@ -156,7 +160,7 @@ def trend_history(conn, trend_id: int) -> list[dict] | None:
     if exists is None:
         return None
     history = _rows(conn.execute(
-        """SELECT week_start, category_rank, search_count
+        """SELECT week_start, category_rank, score, source_score, wordstat_score, search_count
            FROM v_trend_history
            WHERE trend_id = %s
            ORDER BY week_start""",
@@ -166,6 +170,9 @@ def trend_history(conn, trend_id: int) -> list[dict] | None:
         {
             "weekStart": point["week_start"].isoformat(),
             "rank": point["category_rank"],
+            "score": None if point["score"] is None else float(point["score"]),
+            "sourceScore": None if point["source_score"] is None else float(point["source_score"]),
+            "wordstatScore": None if point["wordstat_score"] is None else float(point["wordstat_score"]),
             "searchCount": point["search_count"],
         }
         for point in history
