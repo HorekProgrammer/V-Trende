@@ -81,16 +81,25 @@ class MigrationTests(DatabaseTestCase):
     def test_new_migration_is_applied_and_failed_one_is_rolled_back(self):
         from database.migrate import MIGRATIONS_DIR, MigrationError, migrate
         with tempfile.TemporaryDirectory() as tmp:
-            for path in MIGRATIONS_DIR.glob("*.sql"):
+            migration_paths = list(MIGRATIONS_DIR.glob("*.sql"))
+            for path in migration_paths:
                 (Path(tmp) / path.name).write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
-            (Path(tmp) / "005_extra.sql").write_text("CREATE TABLE extra (id INT);", encoding="utf-8")
-            self.assertEqual(migrate(self.conn, directory=Path(tmp)), ["005"])
-            (Path(tmp) / "006_broken.sql").write_text(
+            last_version = max(int(path.name.split("_", 1)[0]) for path in migration_paths)
+            extra_version = f"{last_version + 1:03d}"
+            broken_version = f"{last_version + 2:03d}"
+            (Path(tmp) / f"{extra_version}_extra.sql").write_text(
+                "CREATE TABLE extra (id INT);", encoding="utf-8"
+            )
+            self.assertEqual(migrate(self.conn, directory=Path(tmp)), [extra_version])
+            (Path(tmp) / f"{broken_version}_broken.sql").write_text(
                 "CREATE TABLE half_done (id INT); SELECT * FROM no_such_table;", encoding="utf-8")
             with self.assertRaises(MigrationError):
                 migrate(self.conn, directory=Path(tmp))
         self.assertIsNone(self.scalar("SELECT to_regclass('half_done')"))
-        self.assertFalse(self.scalar("SELECT EXISTS (SELECT 1 FROM schema_migrations WHERE version = '006')"))
+        self.assertFalse(self.scalar(
+            "SELECT EXISTS (SELECT 1 FROM schema_migrations WHERE version = %s)",
+            (broken_version,),
+        ))
 
     def test_baseline_for_database_created_from_schema_sql(self):
         from database.migrate import MIGRATIONS_DIR, migrate
