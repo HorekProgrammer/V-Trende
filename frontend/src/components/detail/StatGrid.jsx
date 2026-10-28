@@ -1,16 +1,20 @@
-import { fmtViews } from '../../utils/trendFormat';
+import { fmtSearches } from '../../utils/trendFormat';
 import './StatGrid.css';
+
+function searchStat(count) 
+{
+  if (count == null) return { value: '—', label: 'Запросов в поиске' };
+  const [value, ...label] = fmtSearches(count).split(' ');
+  return { value, label: label.join(' ') };
+}
 
 export default function StatGrid({ item }) 
 {
-  const [viewsNum, ...viewsLabel] = fmtViews(item.views).split(' ');
-
-  const stats = 
-  [
+  const stats = [
     { value: `#${item.rank}`, label: 'Текущая позиция' },
     { value: `#${item.peak}`, label: 'Пиковая позиция' },
     { value: item.weeks, label: 'Недель в чарте' },
-    { value: viewsNum, label: viewsLabel.join(' ') },
+    searchStat(item.searchCount),
   ];
 
   return (

@@ -97,6 +97,11 @@
   background: rgba(255, 92, 119, .12);
 }
 
+.trend-new {
+  color: var(--orange);
+  background: rgba(255, 122, 41, .14);
+}
+
 .trend-flat {
   color: var(--text-faint);
   background: rgba(255, 255, 255, .05);

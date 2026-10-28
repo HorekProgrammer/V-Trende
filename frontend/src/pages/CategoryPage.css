@@ -49,3 +49,11 @@
   border: 1px dashed var(--border);
   border-radius: var(--radius-m);
 }
+
+.category-list {
+  transition: opacity .15s ease;
+}
+
+.category-list.is-loading {
+  opacity: .55;
+}

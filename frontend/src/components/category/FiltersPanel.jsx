@@ -11,22 +11,24 @@ export default function FiltersPanel
   onGenreToggle,
   onReset,
 }) {
-  return (
+    return (
     <aside className="filters">
       <div className="filter-group">
         <div className="filter-label">СОРТИРОВКА</div>
         <SortChips value={sort} onChange={onSortChange} />
       </div>
 
-      <div className="filter-group">
-        <div className="filter-label">ЖАНР</div>
-        <GenreFilter genres={genres} selected={selectedGenres} onToggle={onGenreToggle} />
-        {selectedGenres.length > 0 && (
-          <button type="button" className="filters-reset" onClick={onReset}>
-            Сбросить жанры
-          </button>
-        )}
-      </div>
+      {genres.length > 0 && (
+        <div className="filter-group">
+          <div className="filter-label">ЖАНР</div>
+          <GenreFilter genres={genres} selected={selectedGenres} onToggle={onGenreToggle} />
+          {selectedGenres.length > 0 && (
+            <button type="button" className="filters-reset" onClick={onReset}>
+              Сбросить жанры
+            </button>
+          )}
+        </div>
+      )}
     </aside>
   );
 }

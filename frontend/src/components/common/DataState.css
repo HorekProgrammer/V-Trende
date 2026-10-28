@@ -1,0 +1,12 @@
+.data-state 
+{
+  padding: 60px 16px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+.data-state--error 
+{
+  color: var(--pink);
+}

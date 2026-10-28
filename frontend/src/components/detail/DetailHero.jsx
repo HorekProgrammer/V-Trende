@@ -19,11 +19,11 @@ export default function DetailHero({ item, category })
           >
             {category.label}
           </span>
-          <span className="detail-tag">{item.genre}</span>
+             {item.genre && <span className="detail-tag">{item.genre}</span>}
         </div>
         <h1 className="detail-title">{item.title}</h1>
         <div className="detail-sub">{item.subtitle}</div>
       </div>
     </div>
-  );ы
+  );
 }
