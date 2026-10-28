@@ -3,7 +3,10 @@ import { Link, useParams } from 'react-router-dom';
 import DetailHero from '../components/detail/DetailHero';
 import StatGrid from '../components/detail/StatGrid';
 import PopularityCard from '../components/detail/PopularityCard';
-import { CATEGORIES, getTrendById } from '../mocks/mockData';
+import DataState from '../components/common/DataState';
+import { CATEGORIES } from '../components/category/categories';
+import { useApi } from '../api/useApi';
+import { trendPath } from '../api/paths';
 import './DetailPage.css';
 
 function BackIcon() 
@@ -24,14 +27,15 @@ function BackIcon()
 export default function DetailPage() 
 {
   const { id } = useParams();
-  const item = getTrendById(id);
+  const { data: item, loading, error } = useApi(trendPath(id));
   const category = item ? CATEGORIES.find((c) => c.id === item.sphere) : null;
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [id]);
 
-  if (!item || !category) 
+  const notFound = error && (error.status === 404 || error.status === 422);
+  if (notFound) 
   {
     return (
       <div className="detail-wrap">
@@ -46,14 +50,20 @@ export default function DetailPage()
 
   return (
     <div className="detail-wrap">
-      <Link to={`/category/${category.id}`} className="back-btn">
+      <Link to={category ? `/category/${category.id}` : '/'} className="back-btn">
         <BackIcon />
-        Назад к чарту
+        {category ? 'Назад к чарту' : 'На главную'}
       </Link>
 
-      <DetailHero item={item} category={category} />
-      <StatGrid item={item} />
-      <PopularityCard key={item.key} item={item} />
+      <DataState loading={loading} error={error}>
+        {item && category && (
+          <>
+            <DetailHero item={item} category={category} />
+            <StatGrid item={item} />
+            <PopularityCard key={item.key} history={item.history} topSize={category.topSize} />
+          </>
+        )}
+      </DataState>
     </div>
   );
 }

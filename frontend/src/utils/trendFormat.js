@@ -22,8 +22,10 @@ export function initials(str)
   return str.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 }
 
-export function fmtViews(n) 
+export function fmtSearches(n) 
 {
-  if (n >= 1000000) return (n / 1000000).toFixed(1).replace('.0', '') + ' млн просмотров';
-  return Math.round(n / 1000) + ' тыс. просмотров';
+  if (n == null) return '';
+  if (n >= 1000000) return (n / 1000000).toFixed(1).replace('.0', '') + ' млн запросов';
+  if (n >= 1000) return Math.round(n / 1000) + ' тыс. запросов';
+  return n + ' запросов';
 }

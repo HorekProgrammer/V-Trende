@@ -6,10 +6,10 @@ export default function PeriodChips({ value, onChange })
     <div className="period-chips">
       {PERIODS.map((p) => (
         <button
-          key={p.days}
+          key={p.id}
           type="button"
-          className={`period-chip ${p.days === value ? 'is-active' : ''}`}
-          onClick={() => onChange(p.days)}
+          className={`period-chip ${p.id === value ? 'is-active' : ''}`}
+          onClick={() => onChange(p.id)}
         >
           {p.label}
         </button>

@@ -20,10 +20,12 @@ export default function CategoryHero({ label, theme, period })
       </div>
       <div className="cat-title-row">
         <h1 className="cat-title">{label}</h1>
-        <div className="period-pill">
-          <CalendarIcon />
-          {period}
-        </div>
+        {period && (
+          <div className="period-pill">
+            <CalendarIcon />
+            {period}
+          </div>
+        )}
       </div>
     </div>
   );
