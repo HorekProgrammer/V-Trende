@@ -1,6 +1,7 @@
 from .twitch_parser import (
     get_russian_twitch_positions,
     get_russian_twitch_ranking,
+    get_cached_russian_twitch_ranking,
     parse_ranking_html,
     parse_ranking_positions_html,
     parse_weekly_stats_html,
@@ -9,6 +10,7 @@ from .twitch_parser import (
 __all__ = [
     "get_russian_twitch_positions",
     "get_russian_twitch_ranking",
+    "get_cached_russian_twitch_ranking",
     "parse_ranking_html",
     "parse_ranking_positions_html",
     "parse_weekly_stats_html",

@@ -96,13 +96,23 @@ def kinopoisk_entry(item: dict) -> dict:
 
 def twitch_entry(item: dict) -> dict:
     slug = item["slug"].lower()
-    return _entry(
+    entry = _entry(
         item,
         title=item["channel"],
         key=match_key(slug),
         external_id=slug,
         url=f"https://www.twitch.tv/{slug}",
     )
+    entry.update({
+        "total_followers": item.get("total_followers", 0),
+        "hours_streamed": item.get("hours_streamed", 0),
+        "average_viewers": item.get("average_viewers", 0),
+        "peak_viewers": item.get("peak_viewers", 0),
+        "hours_watched": item.get("hours_watched", 0),
+        "followers_gained": item.get("followers_gained", 0),
+        "followers_per_hour": item.get("followers_per_hour", 0),
+    })
+    return entry
 
 
 # Импорт парсеров внутри функций: модуль можно импортировать без Playwright
@@ -168,8 +178,8 @@ def _kinopoisk_boxoffice(limit):
 
 
 def _twitch(limit):
-    from parser.twitch import get_russian_twitch_positions
-    return get_russian_twitch_positions(limit)
+    from parser.twitch import get_cached_russian_twitch_ranking
+    return get_cached_russian_twitch_ranking(limit)
 
 
 CHARTS = {chart.key: chart for chart in (

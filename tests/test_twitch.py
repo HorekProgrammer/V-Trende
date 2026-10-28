@@ -1,6 +1,8 @@
 import base64
 import json
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 from urllib.error import HTTPError, URLError
 
@@ -139,7 +141,8 @@ class TwitchTests(unittest.TestCase):
         self.assertEqual(result[0]["channel"], "Канал 1")
         self.assertEqual(result[-1]["channel"], "Канал 125")
         self.assertEqual(result[-1]["hours_streamed"], 125)
-        self.assertNotIn("position", result[-1])
+        self.assertEqual(result[-1]["position"], 125)
+        self.assertEqual(result[-1]["slug"], "channel_125")
         requests = [item.args[0] for item in open_url.call_args_list]
         self.assertEqual([request.full_url for request in requests], [
             RANKING_URL,
@@ -153,6 +156,34 @@ class TwitchTests(unittest.TestCase):
         )
         self.assertEqual(pause.call_count, 124)
         pause.assert_called_with(1.0)
+
+    @patch("parser.twitch.twitch_parser._fetch_ranking")
+    @patch("parser.twitch.twitch_parser._fetch_channel_stats")
+    @patch("parser.twitch.twitch_parser.sleep")
+    def test_cached_collection_resumes_after_channel_failure(self, _pause, fetch_stats, ranking):
+        ranking.return_value = [
+            {"position": 1, "channel": "One", "total_followers": 10, "_slug": "one"},
+            {"position": 2, "channel": "Two", "total_followers": 20, "_slug": "two"},
+        ]
+        one = {
+            "hours_streamed": 1.0, "average_viewers": 2, "peak_viewers": 3,
+            "hours_watched": 4, "followers_gained": 5, "followers_per_hour": 6.0,
+        }
+        two = {**one, "hours_watched": 40}
+        fetch_stats.side_effect = [one, RuntimeError("HTTP 429")]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cache = Path(tmp) / "week.json"
+            with self.assertRaisesRegex(RuntimeError, "429"):
+                get_russian_twitch_ranking(2, cache_path=cache)
+
+            fetch_stats.reset_mock(side_effect=True)
+            fetch_stats.return_value = two
+            result = get_russian_twitch_ranking(2, cache_path=cache)
+
+        fetch_stats.assert_called_once_with("two", 30)
+        self.assertEqual(result[0]["hours_watched"], 4)
+        self.assertEqual(result[1]["hours_watched"], 40)
 
     @patch("parser.twitch.twitch_parser._fetch_channel_stats")
     @patch("parser.twitch.twitch_parser.sleep")

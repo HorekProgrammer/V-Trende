@@ -292,12 +292,14 @@ class RunAllTests(unittest.TestCase):
         err = io.StringIO()
         with patch.dict(run_all.CHARTS, charts, clear=True), \
                 patch("parser.run_all.save_chart", return_value="ok") as saved, \
-                patch("parser.run_all.save_chart_failure", return_value="ok"), redirect_stderr(err):
+                patch("parser.run_all.save_chart_failure", return_value="ok"), \
+                patch("parser.run_all.missing_chart_keys", return_value=(list(charts), [])), \
+                patch("parser.run_all.run_wordstat", return_value=0), redirect_stderr(err):
             code = run_all.main(["--save"])
         self.assertEqual(code, 1)
         good.assert_called_once_with(100)
         saved.assert_called_once()
-        self.assertIn("успешно 1 из 2", err.getvalue())
+        self.assertIn("собрано 1 из 2", err.getvalue())
         self.assertIn("vk", err.getvalue())
 
 

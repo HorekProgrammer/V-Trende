@@ -83,11 +83,20 @@ def _entries(payload: dict) -> list:
     return entries
 
 
-def _chart_entry(entry: dict) -> dict:
+def _nonnegative_number(entry: dict, key: str, *, integer: bool = False) -> int | float:
+    value = entry.get(key, 0)
+    valid_type = type(value) is int if integer else type(value) in (int, float)
+    if not valid_type or value < 0:
+        kind = "целым" if integer else "числом"
+        raise PayloadError(f"Поле {key!r} должно быть неотрицательным {kind}: {value!r}.")
+    return value
+
+
+def _chart_entry(entry: dict, source: str) -> dict:
     position = entry.get("position")
     if type(position) is not int or not 1 <= position <= MAX_POSITION:
         raise PayloadError(f"Позиция должна быть целым числом от 1 до {MAX_POSITION}: {position!r}.")
-    return {
+    result = {
         "position": position,
         "title": _text(entry, "title"),
         "subtitle": _text(entry, "subtitle", required=False),
@@ -96,6 +105,17 @@ def _chart_entry(entry: dict) -> dict:
         "url": _text(entry, "url", required=False, max_length=2000),
         "match_key": _text(entry, "match_key"),
     }
+    if source == "twitch":
+        result["twitch_metrics"] = {
+            "total_followers": _nonnegative_number(entry, "total_followers", integer=True),
+            "hours_streamed": _nonnegative_number(entry, "hours_streamed"),
+            "average_viewers": _nonnegative_number(entry, "average_viewers", integer=True),
+            "peak_viewers": _nonnegative_number(entry, "peak_viewers", integer=True),
+            "hours_watched": _nonnegative_number(entry, "hours_watched", integer=True),
+            "followers_gained": _nonnegative_number(entry, "followers_gained", integer=True),
+            "followers_per_hour": _nonnegative_number(entry, "followers_per_hour"),
+        }
+    return result
 
 
 # ---------- запись ----------
@@ -175,7 +195,7 @@ def load_chart(conn, payload: dict) -> str:
     category = _category(payload)
     week = _week(payload)
     collected_at = _collected_at(payload)
-    entries = sorted((_chart_entry(e) for e in _entries(payload)), key=lambda e: e["position"])
+    entries = sorted((_chart_entry(e, source) for e in _entries(payload)), key=lambda e: e["position"])
     if not entries:
         raise PayloadError("В пакете чарта нет позиций.")
     positions = [e["position"] for e in entries]
@@ -198,6 +218,15 @@ def load_chart(conn, payload: dict) -> str:
     ).fetchone()[0]
     # Повторная загрузка за ту же неделю заменяет позиции запуска целиком.
     conn.execute("DELETE FROM trend_history WHERE run_id = %s", (run_id,))
+    if source == "twitch":
+        conn.execute(
+            """DELETE FROM twitch_weekly_stats
+               WHERE week_start = %s
+                 AND trend_id IN (
+                     SELECT trend_id FROM trend_source_items WHERE source = 'twitch'
+                 )""",
+            (week,),
+        )
 
     seen, skipped = set(), 0
     for entry in entries:
@@ -211,6 +240,32 @@ def load_chart(conn, payload: dict) -> str:
             "INSERT INTO trend_history (run_id, trend_id, position) VALUES (%s, %s, %s)",
             (run_id, trend_id, entry["position"]),
         )
+        if source == "twitch":
+            metrics = entry["twitch_metrics"]
+            conn.execute(
+                """
+                INSERT INTO twitch_weekly_stats (
+                    trend_id, week_start, total_followers, hours_streamed,
+                    average_viewers, peak_viewers, hours_watched,
+                    followers_gained, followers_per_hour, collected_at
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, COALESCE(%s, NOW()))
+                ON CONFLICT (trend_id, week_start) DO UPDATE SET
+                    total_followers = EXCLUDED.total_followers,
+                    hours_streamed = EXCLUDED.hours_streamed,
+                    average_viewers = EXCLUDED.average_viewers,
+                    peak_viewers = EXCLUDED.peak_viewers,
+                    hours_watched = EXCLUDED.hours_watched,
+                    followers_gained = EXCLUDED.followers_gained,
+                    followers_per_hour = EXCLUDED.followers_per_hour,
+                    collected_at = EXCLUDED.collected_at
+                """,
+                (
+                    trend_id, week, metrics["total_followers"], metrics["hours_streamed"],
+                    metrics["average_viewers"], metrics["peak_viewers"],
+                    metrics["hours_watched"], metrics["followers_gained"],
+                    metrics["followers_per_hour"], collected_at,
+                ),
+            )
     note = f", пропущено повторов: {skipped}" if skipped else ""
     return f"{source} / {name} за {week}: {len(seen)} позиций{note}"
 

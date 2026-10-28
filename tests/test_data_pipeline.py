@@ -27,7 +27,7 @@ def env(**values):
 class MigrationFilesTests(unittest.TestCase):
     def test_project_migrations_are_ordered_and_named(self):
         migrations = discover()
-        self.assertEqual([m.version for m in migrations], ["001", "002", "003", "004"])
+        self.assertEqual([m.version for m in migrations], ["001", "002", "003", "004", "005", "006"])
         self.assertTrue(all(m.sql.strip() for m in migrations))
 
     def test_bad_name_and_duplicate_number_are_rejected(self):
@@ -103,16 +103,44 @@ class BoxOfficeAdapterTests(unittest.TestCase):
         self.assertNotIn("weeks_in_release", entry)
 
 
+class TwitchAdapterTests(unittest.TestCase):
+    def test_weekly_metrics_are_kept_in_payload(self):
+        from parser.common import build_payload
+
+        channel = {
+            "position": 1,
+            "channel": "Streamer",
+            "slug": "streamer",
+            "total_followers": 100_000,
+            "hours_streamed": 40.5,
+            "average_viewers": 2_000,
+            "peak_viewers": 5_000,
+            "hours_watched": 81_000,
+            "followers_gained": 500,
+            "followers_per_hour": 12.346,
+        }
+        entry = build_payload("twitch", [channel], week=MONDAY)["entries"][0]
+
+        self.assertEqual(entry["external_id"], "streamer")
+        self.assertEqual(entry["hours_watched"], 81_000)
+        self.assertEqual(entry["average_viewers"], 2_000)
+        self.assertEqual(entry["followers_gained"], 500)
+        self.assertEqual(entry["followers_per_hour"], 12.346)
+
+
 class RunAllFailureTests(unittest.TestCase):
     def test_failed_chart_is_recorded_with_save(self):
         bad = MagicMock(side_effect=RuntimeError("сайт недоступен"))
         chart = CHARTS["vk"].__class__(**{**CHARTS["vk"].__dict__, "fetch": bad})
         with patch.dict(run_all.CHARTS, {"vk": chart}, clear=True), \
+                patch("parser.run_all.missing_chart_keys", return_value=(["vk"], [])), \
                 patch("parser.run_all.save_chart_failure", return_value="ok") as recorded, \
+                patch("parser.run_all.run_wordstat", return_value=0) as wordstat, \
                 redirect_stderr(io.StringIO()) as err:
             code = run_all.main(["--save"])
         self.assertEqual(code, 1)
         recorded.assert_called_once()
+        wordstat.assert_called_once()
         self.assertIn("сбой записан", err.getvalue())
 
     def test_failure_is_not_recorded_without_save(self):
@@ -122,6 +150,33 @@ class RunAllFailureTests(unittest.TestCase):
                 patch("parser.run_all.save_chart_failure") as recorded, redirect_stderr(io.StringIO()):
             run_all.main([])
         recorded.assert_not_called()
+
+    def test_wordstat_failure_makes_pipeline_fail(self):
+        chart = CHARTS["vk"].__class__(
+            **{**CHARTS["vk"].__dict__, "fetch": MagicMock(return_value=[])}
+        )
+        with patch.dict(run_all.CHARTS, {"vk": chart}, clear=True), \
+                patch("parser.run_all.missing_chart_keys", return_value=(["vk"], [])), \
+                patch("parser.run_all.save_chart", return_value="ok"), \
+                patch("parser.run_all.run_wordstat", return_value=1), \
+                redirect_stderr(io.StringIO()):
+            self.assertEqual(run_all.main(["--save"]), 1)
+
+    def test_next_week_is_prepared_without_early_publish(self):
+        current_week = date(2026, 10, 26)
+        with patch.dict(run_all.CHARTS, {}, clear=True), \
+                patch("parser.run_all.week_start", return_value=current_week), \
+                patch("parser.run_all.missing_chart_keys", return_value=([], [])) as missing, \
+                patch("parser.run_all.run_wordstat", return_value=0) as wordstat, \
+                redirect_stderr(io.StringIO()):
+            self.assertEqual(
+                run_all.main(["--save", "--next-week", "--defer-publish"]),
+                0,
+            )
+
+        target = date(2026, 11, 2)
+        missing.assert_called_once_with([], target)
+        wordstat.assert_called_once_with(target, publish=False)
 
 
 class WordstatBatchTests(unittest.TestCase):
@@ -151,6 +206,27 @@ class WordstatBatchTests(unittest.TestCase):
         self.assertEqual(payload["type"], "search_stats")
         self.assertEqual(payload["week_start"], "2026-10-19")
         json.dumps(payload)
+
+    def test_deferred_payload_does_not_request_publication(self):
+        payload = wordstat_batch.build_payload(MONDAY, [], publish=False)
+        self.assertIs(payload["publish"], False)
+
+    def test_transient_network_error_is_retried(self):
+        calls = 0
+
+        def fetch(_query):
+            nonlocal calls
+            calls += 1
+            if calls < 3:
+                raise RuntimeError("Wordstat Web: ошибка сети или таймаут.")
+            return 42
+
+        entries, stopped = wordstat_batch.collect(
+            self.TRENDS[:1], fetch=fetch, delay=0, retry_delay=0, log=lambda m: None
+        )
+        self.assertIsNone(stopped)
+        self.assertEqual(calls, 3)
+        self.assertEqual(entries[0]["search_count"], 42)
 
 
 class SeedGeneratorTests(unittest.TestCase):
