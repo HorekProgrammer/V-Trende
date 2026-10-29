@@ -8,6 +8,7 @@
 from dataclasses import dataclass
 from typing import Callable
 
+from .circuit_breaker import protected_call
 from .normalize import match_key
 
 CATEGORY_LIMITS = {
@@ -119,67 +120,67 @@ def twitch_entry(item: dict) -> dict:
 # и без настроек VK/Wordstat, а ошибка одного парсера не ломает остальные.
 def _yandex_music(limit):
     from parser.yandex_music import get_yandex_music_chart
-    return get_yandex_music_chart(limit)
+    return protected_call("yandex_music", get_yandex_music_chart, limit)
 
 
 def _zvuk(limit):
     from parser.zvuk import get_zvuk_chart
-    return get_zvuk_chart(limit, browser_fallback=True)
+    return protected_call("zvuk", get_zvuk_chart, limit, browser_fallback=True)
 
 
 def _shazam(limit):
     from parser.shazam import get_shazam_chart
-    return get_shazam_chart(limit)
+    return protected_call("shazam", get_shazam_chart, limit)
 
 
 def _vk(limit):
     from parser.vk import get_vk_chart
-    return get_vk_chart(limit)
+    return protected_call("vk", get_vk_chart, limit)
 
 
 def _apple_music(limit):
     from parser.apple_music import get_apple_music_chart
-    return get_apple_music_chart(limit)
+    return protected_call("apple_music", get_apple_music_chart, limit)
 
 
 def _kion(limit):
     from parser.kion import get_kion_chart
-    return get_kion_chart(limit)
+    return protected_call("kion", get_kion_chart, limit)
 
 
 def _steam(limit):
     from parser.steam import get_steam_chart
-    return get_steam_chart(limit=limit)
+    return protected_call("steam", get_steam_chart, limit=limit)
 
 
 def _steam_players(limit):
     from parser.steam_players import get_steam_players_chart
-    return get_steam_players_chart(limit=limit)
+    return protected_call("steam", get_steam_players_chart, limit=limit)
 
 
 def _epic_most_played(limit):
     from parser.epic_most_played import get_epic_most_played_chart
-    return get_epic_most_played_chart(limit=limit)
+    return protected_call("epic", get_epic_most_played_chart, limit=limit)
 
 
 def _epic_popular(limit):
     from parser.epic_popular import get_epic_popular_chart
-    return get_epic_popular_chart(limit=limit)
+    return protected_call("epic", get_epic_popular_chart, limit=limit)
 
 
 def _kinopoisk(limit):
     from parser.kinopoisk import get_kinopoisk_chart
-    return get_kinopoisk_chart(limit)
+    return protected_call("kinopoisk", get_kinopoisk_chart, limit)
 
 
 def _kinopoisk_boxoffice(limit):
     from parser.kinopoisk_boxoffice import get_kinopoisk_boxoffice
-    return get_kinopoisk_boxoffice(limit=limit)
+    return protected_call("kinopoisk", get_kinopoisk_boxoffice, limit=limit)
 
 
 def _twitch(limit):
     from parser.twitch import get_cached_russian_twitch_ranking
-    return get_cached_russian_twitch_ranking(limit)
+    return protected_call("twitch", get_cached_russian_twitch_ranking, limit)
 
 
 CHARTS = {chart.key: chart for chart in (
