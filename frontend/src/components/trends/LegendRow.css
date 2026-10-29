@@ -113,7 +113,8 @@
 
 @media (max-width: 700px) 
 {
-  .legend-info { width: auto; flex: 1 1 60%; }
+  .legend-row { gap: 10px; padding: 12px; }
+  .legend-info { width: auto; min-width: 0; flex: 1 1 55%; }
   .legend-bar-wrap { order: 5; flex: 1 1 100%; margin-top: 8px; }
-  .legend-weeks { order: 4; margin-left: auto; }
+  .legend-weeks { order: 4; width: auto; margin-left: auto; font-size: 11px; }
 }

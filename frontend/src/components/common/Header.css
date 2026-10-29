@@ -35,6 +35,7 @@
   display: flex;
   gap: 4px;
   flex: 1;
+  min-width: 0;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -68,4 +69,34 @@
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+}
+
+@media (max-width: 700px) {
+  .topbar {
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    padding: 10px 14px 0;
+  }
+
+  .logo-word {
+    font-size: 14px;
+  }
+
+  .nav-right {
+    margin-left: auto;
+  }
+
+  .nav-spheres {
+    order: 3;
+    flex: 0 0 calc(100% + 28px);
+    width: calc(100% + 28px);
+    margin: 0 -14px;
+    padding: 0 10px 8px;
+    gap: 2px;
+  }
+
+  .nav-item {
+    padding: 7px 10px;
+    font-size: 12px;
+  }
 }

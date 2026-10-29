@@ -129,3 +129,45 @@
     display: none !important;
   }
 }
+
+@media (max-width: 560px) {
+  .row-card {
+    width: 100%;
+    max-width: 100%;
+    gap: 9px;
+    padding: 10px;
+  }
+
+  .row-rank {
+    width: 25px;
+    font-size: 17px;
+  }
+
+  .row-cover {
+    width: 44px;
+    height: 44px;
+    border-radius: 9px;
+    font-size: 14px;
+  }
+
+  .row-title {
+    font-size: 13px;
+  }
+
+  .row-sub {
+    font-size: 11px;
+  }
+
+  .row-trend {
+    width: 44px;
+  }
+
+  .trend-badge {
+    padding: 3px 5px;
+    font-size: 10px;
+  }
+
+  .row-arrow {
+    display: none;
+  }
+}

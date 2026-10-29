@@ -30,6 +30,7 @@
   overflow-x: auto;
   padding-bottom: 6px;
   scrollbar-width: thin;
+  max-width: 100%;
 }
 
 .card-row::-webkit-scrollbar {
@@ -100,4 +101,33 @@
 {
   flex-shrink: 0;
   filter: drop-shadow(0 3px 8px rgba(242, 184, 75, 0.4));
+}
+
+@media (max-width: 560px) {
+  .group-block {
+    margin-bottom: 34px;
+  }
+
+  .group-head h2 {
+    font-size: 18px;
+  }
+
+  .group-desc {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .card-row {
+    gap: 10px;
+    margin-right: -14px;
+    padding-right: 14px;
+  }
+
+  .grid-2col .mini-card {
+    height: 112px;
+  }
+
+  .grid-2col .mini-cover {
+    width: 82px;
+  }
 }

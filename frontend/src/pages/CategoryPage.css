@@ -36,7 +36,32 @@
   }
   .cat-body 
   { 
-    flex-direction: column; 
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .category-list {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 560px)
+{
+  .category-content {
+    width: 100%;
+    max-width: 100%;
+    padding: 16px 12px 54px;
+  }
+
+  .cat-body {
+    gap: 18px;
+    margin-top: 18px;
+  }
+
+  .category-list {
+    gap: 8px;
   }
 }
 
