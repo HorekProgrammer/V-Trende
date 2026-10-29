@@ -64,3 +64,17 @@
   color: var(--text-faint);
   margin-top: 6px;
 }
+
+@media (max-width: 560px) {
+  .mini-card {
+    flex-basis: 154px;
+  }
+
+  .mini-body {
+    padding: 9px 10px 11px;
+  }
+
+  .mini-title {
+    font-size: 12.5px;
+  }
+}

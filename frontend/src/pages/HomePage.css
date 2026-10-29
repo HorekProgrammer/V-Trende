@@ -38,3 +38,27 @@ html
   line-height: 1.1;
   max-width: 640px;
 }
+
+@media (max-width: 700px)
+{
+  .home-layout,
+  .home {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .home {
+    padding: 18px 14px 56px;
+  }
+
+  .hero {
+    padding: 22px 18px;
+    margin-bottom: 28px;
+    border-radius: var(--radius-m);
+  }
+
+  .hero h1 {
+    font-size: clamp(23px, 7.4vw, 30px);
+    overflow-wrap: anywhere;
+  }
+}

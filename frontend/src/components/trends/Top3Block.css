@@ -7,6 +7,8 @@
 
 .top3-col
 {
+  min-width: 0;
+  max-width: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-m);
@@ -28,6 +30,8 @@
 
 .top3-item 
 {
+  width: 100%;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -104,5 +108,6 @@
 
 @media (max-width: 480px) 
 {
-  .top3-columns { grid-template-columns: 1fr; }
+  .top3-columns { width: 100%; max-width: 100%; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .top3-col { padding: 13px 12px; }
 }

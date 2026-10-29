@@ -61,3 +61,30 @@
   font-weight: 600;
   color: var(--text-dim);
 }
+
+@media (max-width: 560px) {
+  .cat-hero {
+    padding: 18px 0 12px;
+  }
+
+  .cat-hero-icon {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 12px;
+  }
+
+  .cat-title-row {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .cat-title {
+    font-size: 24px;
+  }
+
+  .period-pill {
+    max-width: 100%;
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+}
