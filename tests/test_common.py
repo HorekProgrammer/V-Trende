@@ -86,13 +86,13 @@ class WeekStartTests(unittest.TestCase):
 
 class LimitTests(unittest.TestCase):
     def test_category_limits(self):
-        self.assertEqual(CATEGORY_LIMITS, {"music": 100, "games": 100, "movies": 50, "streamers": 50})
+        self.assertEqual(CATEGORY_LIMITS, {"music": 100, "games": 100, "movies": 50, "streamers": 150})
 
     def test_every_chart_respects_category_limit(self):
         expected = {
             "yandex_music": 100, "zvuk": 100, "shazam": 100, "vk": 100, "apple_music": 100, "kion": 100,
             "steam": 100, "steam_players": 100, "epic_most_played": 100, "epic_popular": 50,
-            "kinopoisk": 50, "kinopoisk_boxoffice": 50, "twitch": 50,
+            "kinopoisk": 50, "kinopoisk_boxoffice": 50, "twitch": 150,
         }
         self.assertEqual({key: chart.limit for key, chart in CHARTS.items()}, expected)
 
@@ -116,12 +116,12 @@ class BuildPayloadTests(unittest.TestCase):
             "external_id": None, "url": None, "match_key": "артист|песня 1",
         })
 
-    def test_movies_and_streamers_are_cut_to_50(self):
+    def test_movies_are_cut_to_50_and_streamers_to_150(self):
         movies = [{"position": i, "title": f"Фильм {i}", "kinopoisk_id": i, "year": 2026} for i in range(1, 1001)]
         streamers = [{"position": i, "channel": f"Канал {i}", "slug": f"Chan_{i}"} for i in range(1, 151)]
         self.assertEqual(len(build_payload("kinopoisk", movies, week=MONDAY)["entries"]), 50)
         twitch = build_payload("twitch", streamers, week=MONDAY)["entries"]
-        self.assertEqual(len(twitch), 50)
+        self.assertEqual(len(twitch), 150)
         self.assertEqual(twitch[0]["external_id"], "chan_1")
         self.assertEqual(twitch[0]["url"], "https://www.twitch.tv/chan_1")
 
@@ -215,9 +215,14 @@ class TwitchPositionsTests(unittest.TestCase):
         self.assertEqual(result[0], {"position": 1, "channel": "Канал 1", "slug": "channel_1"})
         self.assertEqual(len(result), 50)
 
+    @patch("parser.twitch.twitch_parser.classify_channels")
     @patch("parser.twitch.twitch_parser.urlopen")
-    def test_positions_do_not_request_channel_stats(self, opened):
+    def test_positions_do_not_request_channel_stats(self, opened, classify):
         opened.return_value = twitch_response(twitch_page())
+        classify.side_effect = lambda channels, **_kwargs: {
+            channel["_slug"].lower(): {"type": "person", "confidence": 1.0}
+            for channel in channels
+        }
         result = get_russian_twitch_positions(50)
         self.assertEqual(opened.call_count, 1)
         self.assertEqual([entry["position"] for entry in result], list(range(1, 51)))

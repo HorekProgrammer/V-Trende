@@ -1,6 +1,7 @@
 import base64
 import json
 import math
+import os
 import re
 from datetime import datetime, timedelta, timezone
 from html import unescape
@@ -9,12 +10,21 @@ from pathlib import Path
 from time import sleep
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlparse
-from urllib.request import Request, urlopen
+from urllib.request import ProxyHandler, Request, build_opener, urlopen
 
-RANKING_URL = "https://twitchtracker.com/channels/ranking/russian/personality"
+from .channel_classifier import (
+    classify_channels,
+    fetch_page_markdown,
+    is_person,
+)
+
+RANKING_URL = "https://twitchtracker.com/channels/ranking/russian"
 PROFILE_URL = "https://twitchtracker.com/{channel}"
 PAGE_SIZE = 50
 MAX_CHANNELS = 150
+HARDCODED_CHANNELS = (
+    {"channel": "evelone2004", "slug": "evelone2004"},
+)
 PERIOD_DAYS = 7
 CHANNEL_DELAY_SECONDS = 1.0
 RATE_LIMIT_RETRIES = 3
@@ -127,6 +137,24 @@ def parse_ranking_positions_html(html: str, *, expected_start: int | None = None
     ]
 
 
+def parse_ranking_markdown(markdown: str, *, expected_start: int | None = None) -> list[dict]:
+    result = []
+    for match in re.finditer(r"(?m)^#(\d+)\s*\|\s*([A-Za-z0-9_]+)\s*\|", markdown):
+        result.append({
+            "position": int(match.group(1)),
+            "channel": match.group(2),
+            "total_followers": 0,
+            "_slug": match.group(2).lower(),
+        })
+    if not result:
+        raise RuntimeError("DeepSeek Fetch: TwitchTracker ranking table was not found.")
+    start = expected_start if expected_start is not None else result[0]["position"]
+    positions = [entry["position"] for entry in result]
+    if positions != list(range(start, start + len(result))):
+        raise RuntimeError("DeepSeek Fetch: TwitchTracker ranking positions are not sequential.")
+    return result
+
+
 def _page_url(page: int) -> str:
     return RANKING_URL if page == 1 else f"{RANKING_URL}?{urlencode({'page': page})}"
 
@@ -134,7 +162,14 @@ def _page_url(page: int) -> str:
 def _read(request: Request, timeout: float, context: str) -> str:
     for attempt in range(RATE_LIMIT_RETRIES + 1):
         try:
-            with urlopen(request, timeout=timeout) as response:
+            proxy = (os.getenv("TWITCHTRACKER_PROXY") or "").strip()
+            if proxy and urlparse(request.full_url).hostname == "twitchtracker.com":
+                response_context = build_opener(
+                    ProxyHandler({"http": proxy, "https": proxy})
+                ).open(request, timeout=timeout)
+            else:
+                response_context = urlopen(request, timeout=timeout)
+            with response_context as response:
                 return response.read().decode("utf-8")
         except HTTPError as error:
             status = error.code
@@ -157,8 +192,15 @@ def _read(request: Request, timeout: float, context: str) -> str:
 
 def _fetch_ranking_page(page: int, timeout: float) -> list[dict]:
     request = Request(_page_url(page), headers=_HEADERS)
-    html = _read(request, timeout, f"страница рейтинга {page}")
-    return _parse_ranking_entries(html, expected_start=(page - 1) * PAGE_SIZE + 1)
+    expected_start = (page - 1) * PAGE_SIZE + 1
+    try:
+        html = _read(request, timeout, f"страница рейтинга {page}")
+    except RuntimeError as error:
+        if "HTTP 403" not in str(error) and not os.getenv("TWITCHTRACKER_PROXY"):
+            raise
+        markdown = fetch_page_markdown(request.full_url, timeout=timeout)
+        return parse_ranking_markdown(markdown, expected_start=expected_start)
+    return _parse_ranking_entries(html, expected_start=expected_start)
 
 
 def _decode_ecs(html: str) -> dict:
@@ -230,6 +272,38 @@ def parse_weekly_stats_html(html: str) -> dict:
     return values
 
 
+def _markdown_number(markdown: str, label: str) -> int | float:
+    match = re.search(
+        rf"(?m)^(?:#\d+\s+)?([+-]?[\d,.]+(?:[KMB])?)\s*\n\n{re.escape(label)}\s*$",
+        markdown,
+    )
+    if match is None:
+        raise ValueError
+    raw = match.group(1).replace(",", "")
+    multiplier = {"K": 1_000, "M": 1_000_000, "B": 1_000_000_000}.get(raw[-1:], 1)
+    if multiplier != 1:
+        raw = raw[:-1]
+    value = float(raw) * multiplier
+    return int(value) if value.is_integer() else value
+
+
+def parse_weekly_stats_markdown(markdown: str) -> dict:
+    try:
+        return {
+            "hours_streamed": float(_markdown_number(markdown, "Hours streamed")),
+            "average_viewers": int(_markdown_number(markdown, "Average viewers")),
+            "peak_viewers": int(_markdown_number(markdown, "Peak viewers")),
+            "hours_watched": int(_markdown_number(markdown, "Hours watched")),
+            "followers_gained": int(_markdown_number(markdown, "Followers gained")),
+            "followers_per_hour": float(_markdown_number(markdown, "Followers / hour")),
+            "total_followers": int(_markdown_number(markdown, "Total followers")),
+        }
+    except (TypeError, ValueError, OverflowError):
+        raise RuntimeError(
+            "DeepSeek Fetch: weekly TwitchTracker channel statistics were not found."
+        ) from None
+
+
 def _channel_bootstrap(html: str, slug: str) -> tuple[int, str]:
     channel_id_match = re.search(r"window\.channel\s*=\s*\{.*?\bid\s*:\s*(\d+)", html, re.DOTALL)
     try:
@@ -253,7 +327,13 @@ def _channel_bootstrap(html: str, slug: str) -> tuple[int, str]:
 def _fetch_channel_stats(slug: str, timeout: float) -> dict:
     profile_url = PROFILE_URL.format(channel=quote(slug))
     profile_request = Request(profile_url, headers={**_HEADERS, "Referer": RANKING_URL})
-    profile_html = _read(profile_request, timeout, f"канал {slug}")
+    try:
+        profile_html = _read(profile_request, timeout, f"канал {slug}")
+    except RuntimeError as error:
+        if "HTTP 403" not in str(error) and not os.getenv("TWITCHTRACKER_PROXY"):
+            raise
+        markdown = fetch_page_markdown(profile_url, timeout=timeout)
+        return parse_weekly_stats_markdown(markdown)
     channel_id, fragments_url = _channel_bootstrap(profile_html, slug)
 
     body = urlencode({"id": channel_id}).encode("ascii")
@@ -291,12 +371,44 @@ def _fetch_ranking(limit: int, timeout: float) -> list[dict]:
     return ranking[:limit]
 
 
+def _fetch_candidates(limit: int, timeout: float) -> list[dict]:
+    result = _fetch_ranking(limit, timeout)
+    if limit != MAX_CHANNELS:
+        return result
+    known = {entry["_slug"].lower() for entry in result}
+    for channel in HARDCODED_CHANNELS:
+        slug = channel["slug"].lower()
+        if slug in known:
+            continue
+        result.append({
+            "position": len(result) + 1,
+            "channel": channel["channel"],
+            "total_followers": 0,
+            "_slug": slug,
+        })
+        known.add(slug)
+    return result
+
+
+def _fetch_personal_candidates(limit: int, timeout: float) -> list[dict]:
+    candidates = _fetch_candidates(limit, timeout)
+    classifications = classify_channels(candidates, timeout=timeout)
+    result = []
+    for entry in candidates:
+        classification = classifications.get(entry["_slug"].lower())
+        if classification is None:
+            raise RuntimeError(f'DeepSeek did not return a classification for {entry["_slug"]}.')
+        if is_person(classification):
+            result.append(entry)
+    return result
+
+
 def get_russian_twitch_positions(limit: int = MAX_CHANNELS, *, timeout: float = 30) -> list[dict]:
     """Только позиции каналов в рейтинге — без запросов статистики каждого канала."""
     _validate_arguments(limit, timeout)
     return [
         {"position": entry["position"], "channel": entry["channel"], "slug": entry["_slug"]}
-        for entry in _fetch_ranking(limit, timeout)
+        for entry in _fetch_personal_candidates(limit, timeout)
     ]
 
 
@@ -328,7 +440,7 @@ def get_russian_twitch_ranking(
     cache_path: Path | None = None,
 ) -> list[dict]:
     _validate_arguments(limit, timeout)
-    ranking = _fetch_ranking(limit, timeout)
+    ranking = _fetch_personal_candidates(limit, timeout)
     cache = _load_stats_cache(cache_path) if cache_path is not None else {}
 
     result = []
@@ -349,7 +461,7 @@ def get_russian_twitch_ranking(
                 cache[slug] = stats
                 _save_stats_cache(cache_path, cache)
         result.append({
-            "position": entry["position"],
+            "position": len(result) + 1,
             "channel": entry["channel"],
             "slug": slug,
             "total_followers": entry["total_followers"],
