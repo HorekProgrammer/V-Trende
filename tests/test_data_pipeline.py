@@ -27,7 +27,7 @@ def env(**values):
 class MigrationFilesTests(unittest.TestCase):
     def test_project_migrations_are_ordered_and_named(self):
         migrations = discover()
-        self.assertEqual([m.version for m in migrations], ["001", "002", "003", "004", "005", "006"])
+        self.assertEqual([m.version for m in migrations], ["001", "002", "003", "004", "005", "006", "007"])
         self.assertTrue(all(m.sql.strip() for m in migrations))
 
     def test_bad_name_and_duplicate_number_are_rejected(self):
@@ -126,6 +126,25 @@ class TwitchAdapterTests(unittest.TestCase):
         self.assertEqual(entry["average_viewers"], 2_000)
         self.assertEqual(entry["followers_gained"], 500)
         self.assertEqual(entry["followers_per_hour"], 12.346)
+
+    def test_negative_follower_growth_is_normalized_to_zero(self):
+        from parser.common import build_payload
+
+        channel = {
+            "position": 1,
+            "channel": "Streamer",
+            "slug": "streamer",
+            "total_followers": 100,
+            "hours_streamed": 5.0,
+            "average_viewers": 10,
+            "peak_viewers": 20,
+            "hours_watched": 50,
+            "followers_gained": -3,
+            "followers_per_hour": -0.6,
+        }
+        entry = build_payload("twitch", [channel], week=MONDAY)["entries"][0]
+        self.assertEqual(entry["followers_gained"], 0)
+        self.assertEqual(entry["followers_per_hour"], 0)
 
 
 class RunAllFailureTests(unittest.TestCase):

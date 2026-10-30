@@ -15,7 +15,7 @@ CATEGORY_LIMITS = {
     "music": 100,
     "games": 100,
     "movies": 50,
-    "streamers": 50,
+    "streamers": 150,
 }
 
 @dataclass(frozen=True)
@@ -110,8 +110,8 @@ def twitch_entry(item: dict) -> dict:
         "average_viewers": item.get("average_viewers", 0),
         "peak_viewers": item.get("peak_viewers", 0),
         "hours_watched": item.get("hours_watched", 0),
-        "followers_gained": item.get("followers_gained", 0),
-        "followers_per_hour": item.get("followers_per_hour", 0),
+        "followers_gained": max(item.get("followers_gained", 0), 0),
+        "followers_per_hour": max(item.get("followers_per_hour", 0), 0),
     })
     return entry
 

@@ -26,7 +26,7 @@ from .db import PROJECT_ROOT, DatabaseConfigError, connect
 
 OUTBOX_DIR = PROJECT_ROOT / "data" / "outbox"
 CATEGORIES = {"music", "games", "movies", "streamers"}
-MAX_POSITION = 100
+MAX_POSITION = 150
 
 
 class PayloadError(ValueError):

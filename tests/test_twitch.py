@@ -1,5 +1,6 @@
 import base64
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,7 +12,14 @@ from parser.twitch import (
     parse_ranking_html,
     parse_weekly_stats_html,
 )
-from parser.twitch.twitch_parser import RANKING_URL, _channel_bootstrap
+from parser.twitch.twitch_parser import (
+    RANKING_URL,
+    _channel_bootstrap,
+    _fetch_candidates,
+    _fetch_ranking_page,
+    parse_ranking_markdown,
+    parse_weekly_stats_markdown,
+)
 
 
 def page(start=1, count=50):
@@ -51,18 +59,92 @@ def weekly_html(**overrides):
     return ecs({"performance": {"week": {"curr": current}}})
 
 
+def weekly_markdown():
+    return """68.1
+
+Hours streamed
+
+36,889
+
+Average viewers
+
+93,943
+
+Peak viewers
+
+2.51M
+
+Hours watched
+
+-166
+
+Followers gained
+
+-65.96
+
+Followers / hour
+
+#183 2,304,573
+
+Total followers
+"""
+
+
 def response(html):
     context = MagicMock()
     context.__enter__.return_value.read.return_value = html.encode()
     return context
 
 
+def classify_as_people(channels, **_kwargs):
+    return {
+        channel["_slug"].lower(): {
+            "type": "person",
+            "confidence": 1.0,
+            "reason": "test",
+            "evidence_urls": [],
+            "checked_at": "2026-01-01T00:00:00Z",
+        }
+        for channel in channels
+    }
+
+
 class TwitchTests(unittest.TestCase):
+    @patch("parser.twitch.twitch_parser._fetch_ranking")
+    def test_adds_evelone_to_full_candidate_collection(self, fetch_ranking):
+        fetch_ranking.return_value = [
+            {"position": 1, "channel": "One", "total_followers": 10, "_slug": "one"}
+        ]
+        result = _fetch_candidates(150, 30)
+        self.assertEqual(result[-1]["_slug"], "evelone2004")
+        self.assertEqual(result[-1]["position"], 2)
+
     def test_parses_ranking_channel_and_total_followers(self):
         result = parse_ranking_html(page())
         self.assertEqual(len(result), 50)
         self.assertEqual(result[0], {"channel": "Канал 1", "total_followers": 3000})
         self.assertNotIn("position", result[0])
+
+    def test_parses_ranking_from_deepseek_markdown(self):
+        markdown = "\n".join(
+            f"#{position} | Channel_{position} | {position * 100} | 10 hours |"
+            for position in range(1, 51)
+        )
+        result = parse_ranking_markdown(markdown, expected_start=1)
+        self.assertEqual(len(result), 50)
+        self.assertEqual(result[0]["_slug"], "channel_1")
+        self.assertEqual(result[-1]["position"], 50)
+
+    @patch("parser.twitch.twitch_parser.urlopen")
+    @patch("parser.twitch.twitch_parser.build_opener")
+    def test_uses_configured_proxy_for_twitchtracker(self, build, direct_open):
+        build.return_value.open.return_value = response(page())
+        with patch.dict(os.environ, {"TWITCHTRACKER_PROXY": "http://user:pass@proxy:8000"}):
+            result = _fetch_ranking_page(1, 30)
+
+        self.assertEqual(len(result), 50)
+        build.return_value.open.assert_called_once()
+        direct_open.assert_not_called()
 
     def test_rejects_missing_invalid_and_nonsequential_rows(self):
         cases = [
@@ -83,6 +165,17 @@ class TwitchTests(unittest.TestCase):
             "hours_watched": 2157656,
             "followers_gained": 19230,
             "followers_per_hour": 320.767,
+        })
+
+    def test_parses_weekly_statistics_from_deepseek_markdown(self):
+        self.assertEqual(parse_weekly_stats_markdown(weekly_markdown()), {
+            "hours_streamed": 68.1,
+            "average_viewers": 36889,
+            "peak_viewers": 93943,
+            "hours_watched": 2_510_000,
+            "followers_gained": -166,
+            "followers_per_hour": -65.96,
+            "total_followers": 2_304_573,
         })
 
     def test_channel_without_streams_has_zero_weekly_statistics(self):
@@ -122,10 +215,11 @@ class TwitchTests(unittest.TestCase):
         self.assertEqual(_channel_bootstrap(html, "StRoGo"), (233741947, url))
 
     @patch("parser.twitch.twitch_parser._fetch_channel_stats")
+    @patch("parser.twitch.twitch_parser.classify_channels", side_effect=classify_as_people)
     @patch("parser.twitch.twitch_parser.sleep")
     @patch("parser.twitch.twitch_parser.urlopen")
     def test_fetches_three_pages_and_each_channel_in_original_order(
-        self, open_url, pause, fetch_stats
+        self, open_url, pause, _classify, fetch_stats
     ):
         open_url.side_effect = [response(page()), response(page(51)), response(page(101))]
         fetch_stats.side_effect = lambda slug, timeout: {
@@ -157,7 +251,7 @@ class TwitchTests(unittest.TestCase):
         self.assertEqual(pause.call_count, 124)
         pause.assert_called_with(1.0)
 
-    @patch("parser.twitch.twitch_parser._fetch_ranking")
+    @patch("parser.twitch.twitch_parser._fetch_personal_candidates")
     @patch("parser.twitch.twitch_parser._fetch_channel_stats")
     @patch("parser.twitch.twitch_parser.sleep")
     def test_cached_collection_resumes_after_channel_failure(self, _pause, fetch_stats, ranking):
@@ -185,10 +279,35 @@ class TwitchTests(unittest.TestCase):
         self.assertEqual(result[0]["hours_watched"], 4)
         self.assertEqual(result[1]["hours_watched"], 40)
 
+    @patch("parser.twitch.twitch_parser._fetch_personal_candidates")
     @patch("parser.twitch.twitch_parser._fetch_channel_stats")
     @patch("parser.twitch.twitch_parser.sleep")
+    def test_keeps_inactive_channels_for_wordstat_scoring(self, _pause, fetch_stats, candidates):
+        candidates.return_value = [
+            {"position": 1, "channel": "Inactive", "total_followers": 10, "_slug": "inactive"},
+            {"position": 2, "channel": "Active", "total_followers": 20, "_slug": "active"},
+        ]
+        base = {
+            "average_viewers": 2, "peak_viewers": 3, "hours_watched": 4,
+            "followers_gained": 5, "followers_per_hour": 6.0,
+        }
+        fetch_stats.side_effect = [
+            {**base, "hours_streamed": 0.0},
+            {**base, "hours_streamed": 2.0},
+        ]
+
+        result = get_russian_twitch_ranking(2)
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual([item["slug"] for item in result], ["inactive", "active"])
+        self.assertEqual([item["position"] for item in result], [1, 2])
+        self.assertEqual(result[0]["hours_streamed"], 0.0)
+
+    @patch("parser.twitch.twitch_parser._fetch_channel_stats")
+    @patch("parser.twitch.twitch_parser.classify_channels", side_effect=classify_as_people)
+    @patch("parser.twitch.twitch_parser.sleep")
     @patch("parser.twitch.twitch_parser.urlopen")
-    def test_retries_rate_limit_response(self, open_url, pause, fetch_stats):
+    def test_retries_rate_limit_response(self, open_url, pause, _classify, fetch_stats):
         open_url.side_effect = [
             HTTPError(RANKING_URL, 429, "rate limited", {}, None),
             response(page()),
@@ -222,6 +341,17 @@ class TwitchTests(unittest.TestCase):
         self.assertIsNone(profile_request.get_header("Cookie"))
         self.assertIsNone(fragments_request.get_header("Cookie"))
 
+    @patch("parser.twitch.twitch_parser.fetch_page_markdown", return_value=weekly_markdown())
+    @patch("parser.twitch.twitch_parser.urlopen")
+    def test_uses_deepseek_fetch_when_profile_is_blocked(self, open_url, fetch_markdown):
+        open_url.side_effect = HTTPError("https://twitchtracker.com/strogo", 403, "denied", {}, None)
+        from parser.twitch.twitch_parser import _fetch_channel_stats
+
+        result = _fetch_channel_stats("strogo", 9)
+
+        self.assertEqual(result["total_followers"], 2_304_573)
+        fetch_markdown.assert_called_once_with("https://twitchtracker.com/strogo", timeout=9)
+
     @patch("parser.twitch.twitch_parser.urlopen")
     def test_rejects_incomplete_page(self, open_url):
         open_url.return_value = response(page(count=49))
@@ -238,8 +368,9 @@ class TwitchTests(unittest.TestCase):
                 get_russian_twitch_ranking(timeout=timeout)
         open_url.assert_not_called()
 
+    @patch("parser.twitch.twitch_parser.fetch_page_markdown", side_effect=RuntimeError("fallback failed"))
     @patch("parser.twitch.twitch_parser.urlopen")
-    def test_network_errors(self, open_url):
+    def test_network_errors(self, open_url, _fetch_markdown):
         errors = (
             HTTPError(RANKING_URL, 403, "denied", {}, None),
             URLError("offline"),

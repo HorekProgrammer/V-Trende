@@ -107,7 +107,10 @@ class MigrationTests(DatabaseTestCase):
         self.conn.execute("CREATE SCHEMA public")
         # База, созданная вручную старым schema.sql (= миграция 001).
         self.conn.execute((MIGRATIONS_DIR / "001_init.sql").read_text(encoding="utf-8"))
-        self.assertEqual(migrate(self.conn, baseline="001"), ["002", "003", "004", "005", "006"])
+        self.assertEqual(
+            migrate(self.conn, baseline="001"),
+            ["002", "003", "004", "005", "006", "007"],
+        )
 
     def test_genres_are_seeded_and_category_is_enforced(self):
         self.assertEqual(self.scalar("SELECT COUNT(*) FROM genres"), 20)
@@ -198,7 +201,7 @@ class LoaderTests(DatabaseTestCase):
         bad_week = build_payload("zvuk", tracks((1, 1)), week=W1)
         bad_week["week_start"] = "2026-10-07"
         bad_position = build_payload("zvuk", tracks((1, 1)), week=W1)
-        bad_position["entries"][0]["position"] = 101
+        bad_position["entries"][0]["position"] = 151
         for payload in (bad_genre, bad_week, bad_position, {"type": "unknown"}):
             with self.subTest(payload=str(payload)[:60]), self.assertRaises(PayloadError):
                 self.load(payload)
