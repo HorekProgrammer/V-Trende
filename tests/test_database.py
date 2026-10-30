@@ -107,7 +107,10 @@ class MigrationTests(DatabaseTestCase):
         self.conn.execute("CREATE SCHEMA public")
         # База, созданная вручную старым schema.sql (= миграция 001).
         self.conn.execute((MIGRATIONS_DIR / "001_init.sql").read_text(encoding="utf-8"))
-        self.assertEqual(migrate(self.conn, baseline="001"), ["002", "003", "004", "005", "006"])
+        self.assertEqual(
+            migrate(self.conn, baseline="001"),
+            ["002", "003", "004", "005", "006", "007"],
+        )
 
     def test_genres_are_seeded_and_category_is_enforced(self):
         self.assertEqual(self.scalar("SELECT COUNT(*) FROM genres"), 20)
