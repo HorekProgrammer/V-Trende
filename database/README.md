@@ -36,6 +36,7 @@ python -m database.load_outbox         # 4. загрузить Wordstat
 | `003_wordstat.sql` | `trend_search_stats`, ручная фраза `trends.search_query` |
 | `004_rankings.sql` | правила рейтинга `category_settings`, материализованный рейтинг и представления |
 | `008_covers.sql` | обложки: `trends.cover_url` и `cover_source`, поле `cover_url` в представлениях карточек |
+| `009_years.sql` | год: `trends.year` (перенос года фильмов и игр из подзаголовка), поле `year` в представлениях карточек |
 
 ## Представления для выдачи
 

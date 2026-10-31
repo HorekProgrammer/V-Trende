@@ -1,3 +1,4 @@
+import re
 from urllib.parse import urlsplit
 
 from parser.common.covers import clean_image_url, largest_from_srcset
@@ -9,7 +10,10 @@ POSTER_SELECTOR = 'img[class*="film-poster"]'
 MAX_MISSES_IN_ROW = 3
 PAUSE_MS = 700
 
-FIND_POSTER_JS = """
+_HEADING_YEAR_RE = re.compile(r"\([^)]*?\b((?:19|20)\d{2})\b[^)]*\)")
+_TITLE_YEAR_RE = re.compile(r",\s*((?:19|20)\d{2})\s*,")
+
+FIND_DETAILS_JS = """
 () => {
     const images = [...document.querySelectorAll('img')].filter(image =>
         /get-kinopoisk-image/.test(
@@ -21,12 +25,12 @@ FIND_POSTER_JS = """
         image.naturalWidth >= 100 && image.naturalHeight > image.naturalWidth * 1.2
     );
     const poster = byClass || portrait;
-    if (!poster) {
-        return null;
-    }
+    const heading = document.querySelector('h1[itemprop="name"]') || document.querySelector('main h1');
     return {
-        srcset: poster.getAttribute('srcset') || '',
-        src: poster.currentSrc || poster.getAttribute('src') || '',
+        srcset: poster ? poster.getAttribute('srcset') || '' : '',
+        src: poster ? poster.currentSrc || poster.getAttribute('src') || '' : '',
+        heading: heading ? heading.textContent || '' : '',
+        title: document.title || '',
     };
 }
 """
@@ -55,10 +59,23 @@ def poster_url(found) -> str | None:
     return None
 
 
-def fill_missing_posters(page, films: list[dict], timeout: float) -> int:
+def film_year(found) -> int | None:
+    if not isinstance(found, dict):
+        return None
+    for text, pattern in ((found.get("heading"), _HEADING_YEAR_RE), (found.get("title"), _TITLE_YEAR_RE)):
+        if isinstance(text, str):
+            match = pattern.search(text)
+            if match:
+                return int(match.group(1))
+    return None
+
+
+def fill_missing_details(page, films: list[dict], timeout: float) -> int:
     found = misses = 0
     for film in films:
-        if film.get("cover_url"):
+        need_cover = not film.get("cover_url")
+        need_year = not film.get("year")
+        if not need_cover and not need_year:
             continue
         if misses >= MAX_MISSES_IN_ROW:
             break
@@ -72,15 +89,20 @@ def fill_missing_posters(page, films: list[dict], timeout: float) -> int:
                 page.wait_for_selector(POSTER_SELECTOR, timeout=5000)
             except Exception:  # noqa: BLE001
                 pass
-            result = page.evaluate(FIND_POSTER_JS)
+            result = page.evaluate(FIND_DETAILS_JS)
         except Exception:  # noqa: BLE001
             result = None
-        poster = poster_url(result)
+        poster = poster_url(result) if need_cover else None
+        year = film_year(result) if need_year else None
         if poster:
             film["cover_url"] = poster
+        if year:
+            film["year"] = year
+        if poster or year:
             found += 1
             misses = 0
         else:
             misses += 1
         page.wait_for_timeout(PAUSE_MS)
     return found
+

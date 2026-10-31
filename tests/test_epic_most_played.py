@@ -59,6 +59,7 @@ class EpicMostPlayedTests(unittest.TestCase):
                 "epic_namespace": "namespace-1",
                 "epic_slug": "game-1",
                 "cover_url": None,
+                "year": None,
             },
         )
 

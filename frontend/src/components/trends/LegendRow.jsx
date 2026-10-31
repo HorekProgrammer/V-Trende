@@ -1,4 +1,5 @@
 import Cover from '../common/Cover';
+import { subtitleWithYear } from '../../utils/trendFormat';
 import './LegendRow.css';
 
 
@@ -13,7 +14,7 @@ export default function LegendRow({ item, maxWeeks, onClick })
         <div className="legend-title">{item.title}</div>
         <div className="legend-sub">
           <span className="legend-chip">{item.categoryLabel}</span>
-          <span className="legend-sub-text">{item.subtitle}</span>
+          <span className="legend-sub-text">{subtitleWithYear(item)}</span>
         </div>
       </div>
       <div className="legend-bar-wrap">

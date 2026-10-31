@@ -36,6 +36,7 @@ class KinopoiskBoxOfficeTests(unittest.TestCase):
                 "position": 1,
                 "title": "Битва моторов",
                 "kinopoisk_id": 5505674,
+                "year": None,
                 "weeks_in_release": 1,
                 "box_office": 285986706,
                 "total_box_office": 289744710,

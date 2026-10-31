@@ -3,7 +3,7 @@ import re
 
 from parser.common.covers import clean_image_url, largest_from_srcset
 
-from .posters import fill_missing_posters, kinopoisk_image_url
+from .posters import fill_missing_details, kinopoisk_image_url
 
 CHART_URL = "https://www.kinopoisk.ru/lists/movies/popular-films/"
 CHART_SIZE = 1000
@@ -241,7 +241,7 @@ def _fetch_chart(limit: int | None, timeout: float) -> list[dict]:
 
                     result.extend(_parse_page(items, page_number))
 
-                fill_missing_posters(page, result[:target_size], timeout)
+                fill_missing_details(page, result[:target_size], timeout)
 
             finally:
                 browser.close()

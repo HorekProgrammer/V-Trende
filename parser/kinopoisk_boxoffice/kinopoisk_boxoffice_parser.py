@@ -3,7 +3,7 @@ import re
 from urllib.parse import urljoin
 
 from parser.common.covers import clean_image_url, largest_from_srcset
-from parser.kinopoisk.posters import fill_missing_posters
+from parser.kinopoisk.posters import fill_missing_details
 
 from playwright.sync_api import (
     TimeoutError as PlaywrightTimeoutError,
@@ -119,6 +119,7 @@ def _parse_row(
         "position": position,
         "title": title,
         "kinopoisk_id": _extract_kinopoisk_id(href),
+        "year": None,
         "weeks_in_release": _extract_weeks(cells[2]),
         "box_office": _optional_first_number(
             cells[3],
@@ -326,7 +327,7 @@ def _fetch_chart(
             if limit is not None:
                 chart = chart[:limit]
 
-            fill_missing_posters(page, chart, timeout)
+            fill_missing_details(page, chart, timeout)
 
         finally:
             browser.close()

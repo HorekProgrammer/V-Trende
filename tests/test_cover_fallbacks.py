@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from parser.kinopoisk.posters import fill_missing_posters, poster_url
+from parser.kinopoisk.posters import fill_missing_details, film_year, poster_url
 from parser.twitch import avatars
 from parser.twitch.avatars import avatar_from_channel_html, fill_missing_avatars
 from parser.twitch.twitch_parser import parse_ranking_markdown, parse_ranking_positions_html
@@ -14,8 +14,9 @@ AVATAR = "https://static-cdn.jtvnw.net/jtv_user_pictures/abc-profile_image-300x3
 
 
 class FakePage:
-    def __init__(self, posters, fail=()):
+    def __init__(self, posters, fail=(), headings=None):
         self.posters, self.fail, self.visited = posters, set(fail), []
+        self.headings = headings or {}
         self.current = None
 
     def goto(self, url, **kwargs):
@@ -30,7 +31,10 @@ class FakePage:
 
     def evaluate(self, script):
         poster = self.posters.get(self.current)
-        return None if poster is None else {"srcset": "", "src": poster}
+        heading = self.headings.get(self.current)
+        if poster is None and heading is None:
+            return None
+        return {"srcset": "", "src": poster or "", "heading": heading or "", "title": ""}
 
     def wait_for_timeout(self, ms):
         pass
@@ -64,25 +68,50 @@ class KinopoiskPosterTests(unittest.TestCase):
 
     def test_open_graph_card_is_not_used(self):
         page = FakePage({})
-        films = [{"kinopoisk_id": 1, "cover_url": None}]
-        fill_missing_posters(page, films, 30)
+        films = [{"kinopoisk_id": 1, "cover_url": None, "year": 2026}]
+        fill_missing_details(page, films, 30)
         self.assertIsNone(films[0]["cover_url"])
 
     def test_fills_only_missing(self):
-        films = [{"kinopoisk_id": 1, "cover_url": "https://x/already.jpg"},
-                 {"kinopoisk_id": 2, "cover_url": None},
-                 {"kinopoisk_id": 3}]
+        films = [{"kinopoisk_id": 1, "cover_url": "https://x/already.jpg", "year": 2026},
+                 {"kinopoisk_id": 2, "cover_url": None, "year": 2026},
+                 {"kinopoisk_id": 3, "year": 2025}]
         page = FakePage({film_url(2): POSTER, film_url(3): POSTER + "3"})
-        self.assertEqual(fill_missing_posters(page, films, 30), 2)
+        self.assertEqual(fill_missing_details(page, films, 30), 2)
         self.assertEqual([f["cover_url"] for f in films], ["https://x/already.jpg", POSTER, POSTER + "3"])
         self.assertEqual(page.visited, [film_url(2), film_url(3)])
 
     def test_stops_after_several_misses(self):
         films = [{"kinopoisk_id": i, "cover_url": None} for i in range(1, 11)]
         page = FakePage({}, fail={film_url(1)})
-        self.assertEqual(fill_missing_posters(page, films, 30), 0)
+        self.assertEqual(fill_missing_details(page, films, 30), 0)
         self.assertEqual(len(page.visited), 3)
         self.assertTrue(all(f["cover_url"] is None for f in films))
+
+
+class KinopoiskYearTests(unittest.TestCase):
+    def test_year_from_heading_and_title(self):
+        self.assertEqual(film_year({"heading": "Чудо-Юдо (2026)", "title": ""}), 2026)
+        self.assertEqual(film_year({"heading": "Игра престолов (сериал 2011 – 2019)"}), 2011)
+        self.assertEqual(
+            film_year({"heading": "Без года", "title": "Морозко фильм, 1964, дата выхода трейлеры"}), 1964)
+        self.assertIsNone(film_year({"heading": "1+1", "title": "Кинопоиск"}))
+        self.assertIsNone(film_year(None))
+
+    def test_box_office_film_gets_year_and_poster(self):
+        films = [{"kinopoisk_id": 7, "year": None, "cover_url": None},
+                 {"kinopoisk_id": 8, "year": 2024, "cover_url": POSTER}]
+        page = FakePage({film_url(7): POSTER}, headings={film_url(7): "Чудо-Юдо (2026)"})
+        self.assertEqual(fill_missing_details(page, films, 30), 1)
+        self.assertEqual((films[0]["year"], films[0]["cover_url"]), (2026, POSTER))
+        self.assertEqual(page.visited, [film_url(7)])
+
+    def test_year_reaches_subtitle(self):
+        from parser.common import build_payload
+        from datetime import date
+        film = {"position": 1, "title": "Чудо-Юдо", "kinopoisk_id": 7, "year": 2026, "cover_url": POSTER}
+        entry = build_payload("kinopoisk_boxoffice", [film], week=date(2026, 10, 26))["entries"][0]
+        self.assertEqual(entry["subtitle"], "2026")
 
 
 class TwitchAvatarSourcesTests(unittest.TestCase):

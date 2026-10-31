@@ -6,6 +6,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from parser.common.covers import yandex_track_cover
+from parser.common.years import yandex_track_year
 
 CHART_URL = "https://music.yandex.ru/chart"
 _PATCH = re.compile(
@@ -48,6 +49,7 @@ def _normalize(track: dict) -> dict:
             "artists": artists,
             "position": position,
             "cover_url": yandex_track_cover(track),
+            "year": yandex_track_year(track),
         }
     except (KeyError, TypeError, ValueError):
         raise RuntimeError("Яндекс Музыка: изменилась структура данных трека.") from None

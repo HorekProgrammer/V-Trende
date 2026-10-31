@@ -99,23 +99,34 @@ class EpicCoverTests(unittest.TestCase):
     def test_query_without_images_is_retried(self):
         good = {"data": {"Storefront": {"collectionLayout": {"collectionOffers": []}}}}
         rejected = {"errors": [{"message": "Cannot query field keyImages"}], "data": None}
-        with patch.object(epic_popular_parser, "_request", side_effect=[rejected, good]) as request:
+        with patch.object(epic_popular_parser, "_request",
+                          side_effect=[rejected, rejected, good]) as request:
             self.assertEqual(epic_popular_parser._fetch_payload(30), good)
         queries = [call.args[0] for call in request.call_args_list]
-        self.assertEqual(queries, [epic_popular_parser.QUERY_WITH_IMAGES, epic_popular_parser.QUERY])
+        self.assertEqual(queries, [epic_popular_parser.QUERY_WITH_DETAILS,
+                                   epic_popular_parser.QUERY_WITH_IMAGES,
+                                   epic_popular_parser.QUERY])
         self.assertNotIn("keyImages", epic_popular_parser.QUERY)
+        self.assertNotIn("releaseDate", epic_popular_parser.QUERY_WITH_IMAGES)
+
+    def test_release_date_rejected_keeps_images(self):
+        good = {"data": {"Storefront": {"collectionLayout": {"collectionOffers": []}}}}
+        rejected = {"errors": [{"message": "Cannot query field releaseDate"}], "data": None}
+        with patch.object(epic_popular_parser, "_request", side_effect=[rejected, good]) as request:
+            self.assertEqual(epic_popular_parser._fetch_payload(30), good)
+        self.assertEqual(request.call_args_list[-1].args[0], epic_popular_parser.QUERY_WITH_IMAGES)
 
     def test_http_error_on_image_query_is_retried(self):
         good = {"data": {"Storefront": {"collectionLayout": {"collectionOffers": []}}}}
         with patch.object(epic_popular_parser, "_request",
-                          side_effect=[RuntimeError("HTTP 400"), good]):
+                          side_effect=[RuntimeError("HTTP 400"), RuntimeError("HTTP 400"), good]):
             self.assertEqual(epic_popular_parser._fetch_payload(30), good)
 
     def test_image_query_used_when_it_works(self):
         good = {"data": {"Storefront": {"collectionLayout": {"collectionOffers": []}}}}
         with patch.object(epic_popular_parser, "_request", return_value=good) as request:
             epic_popular_parser._fetch_payload(30)
-        request.assert_called_once_with(epic_popular_parser.QUERY_WITH_IMAGES, 30)
+        request.assert_called_once_with(epic_popular_parser.QUERY_WITH_DETAILS, 30)
 
 
 class PayloadCoverTests(unittest.TestCase):

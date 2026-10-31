@@ -27,7 +27,7 @@ def env(**values):
 class MigrationFilesTests(unittest.TestCase):
     def test_project_migrations_are_ordered_and_named(self):
         migrations = discover()
-        self.assertEqual([m.version for m in migrations], ["001", "002", "003", "004", "005", "006", "007", "008"])
+        self.assertEqual([m.version for m in migrations], ["001", "002", "003", "004", "005", "006", "007", "008", "009"])
         self.assertTrue(all(m.sql.strip() for m in migrations))
 
     def test_bad_name_and_duplicate_number_are_rejected(self):

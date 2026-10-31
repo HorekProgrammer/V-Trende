@@ -125,6 +125,11 @@ def apple_artwork_url(artwork) -> str | None:
 def zvuk_track_cover(track) -> str | None:
     if not isinstance(track, dict):
         return None
+    cover = track.get("coverSrc")
+    if isinstance(cover, str):
+        url = clean_image_url(cover.replace("{size}", f"{COVER_SIZE}x{COVER_SIZE}"))
+        if url and "{" not in url:
+            return url
     release = track.get("release")
     for holder in (track, release if isinstance(release, dict) else None):
         if holder is None:

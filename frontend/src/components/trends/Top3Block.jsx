@@ -1,4 +1,5 @@
 import Cover from '../common/Cover';
+import { subtitleWithYear } from '../../utils/trendFormat';
 import './Top3Block.css';
 
 export default function Top3Block({id, title, description, groups, onItemClick }) 
@@ -24,7 +25,7 @@ export default function Top3Block({id, title, description, groups, onItemClick }
                 <Cover item={item} className="top3-cover" />
                 <div className="top3-info">
                   <div className="top3-title">{item.title}</div>
-                  <div className="top3-sub">{item.subtitle}</div>
+                  <div className="top3-sub">{subtitleWithYear(item)}</div>
                 </div>
               </div>
             ))}

@@ -13,6 +13,7 @@ def tracks(count=100):
             "title": f"Трек {position}",
             "artists": [{"name": "Первый"}, {"name": "Второй"}],
             "coverUri": f"avatars.yandex.net/get-music-content/1/{position}/%%",
+            "albums": [{"year": 2026, "releaseDate": "2026-07-24T00:00:00+03:00"}],
         }
         for position in range(1, count + 1)
     ]
@@ -37,6 +38,7 @@ class KionTests(unittest.TestCase):
             "title": "Трек 1",
             "artists": ["Первый", "Второй"],
             "cover_url": "https://avatars.yandex.net/get-music-content/1/1/400x400",
+            "year": 2026,
         })
         self.assertEqual(result[-1]["position"], 100)
 

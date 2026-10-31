@@ -12,6 +12,7 @@ def tracks(count=100):
         {
             "title": f"Трек {position}",
             "subtitleLinks": [{"title": "Первый"}, {"title": "Второй"}],
+            "contentDescriptor": {"kind": "song", "identifiers": {"storeAdamID": str(6820477000 + position)}},
             "artwork": {"dictionary": {
                 "url": f"https://is1-ssl.mzstatic.com/image/thumb/Music/{position}/{{w}}x{{h}}{{c}}.{{f}}",
                 "width": 3000, "height": 3000,
@@ -41,6 +42,8 @@ class AppleMusicTests(unittest.TestCase):
             "title": "Трек 1",
             "artists": ["Первый", "Второй"],
             "cover_url": "https://is1-ssl.mzstatic.com/image/thumb/Music/1/400x400bb.jpg",
+            "apple_id": "6820477001",
+            "year": None,
         })
         self.assertEqual(result[-1]["position"], 100)
 
@@ -67,10 +70,19 @@ class AppleMusicTests(unittest.TestCase):
             with self.subTest(field=field), self.assertRaises(RuntimeError):
                 parse_chart_html(page(items))
 
+    @patch("parser.apple_music.itunes_years.urlopen")
     @patch("parser.apple_music.apple_music_parser.urlopen")
-    def test_fetch_without_auth_and_limit(self, opened):
+    def test_fetch_without_auth_and_limit(self, opened, itunes):
         opened.return_value.__enter__.return_value.read.return_value = page(tracks()).encode()
-        self.assertEqual(len(get_apple_music_chart(5, timeout=12)), 5)
+        itunes.return_value.__enter__.return_value.read.return_value = json.dumps({"results": [
+            {"wrapperType": "track", "trackId": 6820477001, "releaseDate": "2026-07-24T12:00:00Z"},
+        ]}).encode()
+        result = get_apple_music_chart(5, timeout=12)
+        self.assertEqual(len(result), 5)
+        self.assertEqual(result[0]["year"], 2026)
+        self.assertIsNone(result[1]["year"])
+        lookup = itunes.call_args.args[0].full_url
+        self.assertIn("6820477001%2C6820477002", lookup)
         request = opened.call_args.args[0]
         self.assertEqual(request.full_url, CHART_URL)
         self.assertIsNone(request.get_header("Cookie"))
