@@ -11,6 +11,7 @@ def track(number):
     item = [0] * 32
     item[3] = f"Трек {number} &amp; Remix"
     item[4] = "Первый, Второй &amp; Co"
+    item[14] = f"https://sun9-1.userapi.com/s_{number}.jpg,https://sun9-1.userapi.com/b_{number}.jpg"
     return item
 
 
@@ -37,6 +38,7 @@ class VkTests(unittest.TestCase):
             "position": 1,
             "title": "Трек 1 & Remix",
             "artists": ["Первый", "Второй & Co"],
+            "cover_url": "https://sun9-1.userapi.com/b_1.jpg",
         })
         self.assertEqual(result[-1]["position"], 100)
 

@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 from .circuit_breaker import protected_call
+from .covers import clean_image_url
 from .normalize import match_key
 
 CATEGORY_LIMITS = {
@@ -46,6 +47,7 @@ def _entry(item: dict, *, title: str, key: str, subtitle=None,
         "genre": None,
         "external_id": None if external_id is None else str(external_id),
         "url": url,
+        "cover_url": clean_image_url(item.get("cover_url")),
         "match_key": key,
     }
 

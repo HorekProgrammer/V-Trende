@@ -35,6 +35,7 @@ python -m database.load_outbox         # 4. загрузить Wordstat
 | `002_genres.sql` | справочник жанров; `trends.genre_id` (пока пусто, источник — нейросеть) |
 | `003_wordstat.sql` | `trend_search_stats`, ручная фраза `trends.search_query` |
 | `004_rankings.sql` | правила рейтинга `category_settings`, материализованный рейтинг и представления |
+| `008_covers.sql` | обложки: `trends.cover_url` и `cover_source`, поле `cover_url` в представлениях карточек |
 
 ## Представления для выдачи
 

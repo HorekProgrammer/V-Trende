@@ -1,5 +1,6 @@
 import './TrendCard.css';
-import { coverGrad, initials, fmtSearches } from '../../utils/trendFormat';
+import { fmtSearches } from '../../utils/trendFormat';
+import Cover from '../common/Cover';
 
 
 function TrendBadge({ prevRank, rank, isNew }) {
@@ -15,9 +16,7 @@ export default function TrendCard({ item, onClick }) {
   return (
     <div className="row-card" onClick={onClick}>
       <div className="row-rank">{item.rank}</div>
-      <div className="row-cover" style={{ background: coverGrad(item.key) }}>
-        {initials(item.title)}
-      </div>
+      <Cover item={item} className="row-cover" />
       <div className="row-info">
         <div className="row-title">{item.title}</div>
         <div className="row-sub">{item.subtitle}</div>

@@ -1,8 +1,14 @@
 import math
 from html.parser import HTMLParser
 
+from parser.common.covers import clean_image_url, largest_from_srcset
+
 CHART_URL = "https://www.shazam.com/ru-ru/charts/top-200/russia"
 CHART_SIZE = 200
+
+
+def _cover(srcset, src) -> str | None:
+    return clean_image_url(largest_from_srcset(srcset)) or clean_image_url(src)
 
 
 class _ChartParser(HTMLParser):
@@ -19,13 +25,15 @@ class _ChartParser(HTMLParser):
     def handle_starttag(self, tag, attrs):
         attributes = dict(attrs)
         if tag == "li":
-            self._list_items.append({"position_text": [], "titles": [], "artists": []})
+            self._list_items.append({"position_text": [], "titles": [], "artists": [], "cover": None})
             return
         if not self._list_items:
             return
 
         row = self._list_items[-1]
-        if tag == "span" and "SongItem_rankingNumber" in attributes.get("class", ""):
+        if tag == "img" and row["cover"] is None:
+            row["cover"] = _cover(attributes.get("srcset"), attributes.get("src"))
+        elif tag == "span" and "SongItem_rankingNumber" in attributes.get("class", ""):
             self._rank_span_depth = len(self._list_items)
         elif tag == "a":
             test_id = attributes.get("data-test-id")
@@ -64,6 +72,7 @@ def parse_chart_html(html: str) -> list[dict]:
                 "position": position,
                 "title": titles[0],
                 "artists": artists,
+                "cover_url": row["cover"],
             })
     except (TypeError, ValueError):
         raise RuntimeError("Shazam: некорректная строка чарта; возможно, формат сайта изменился.") from None
@@ -85,7 +94,8 @@ def _validate_tracks(tracks: list[dict]) -> list[dict]:
                     or not isinstance(artists, list) or not artists
                     or any(not isinstance(artist, str) or not artist.strip() for artist in artists)):
                 raise ValueError
-            result.append({"position": position, "title": title, "artists": artists})
+            result.append({"position": position, "title": title, "artists": artists,
+                           "cover_url": _cover(track.get("srcset"), track.get("src"))})
     except (KeyError, TypeError, ValueError):
         raise RuntimeError("Shazam: некорректная строка чарта; возможно, формат сайта изменился.") from None
     if (len(result) != CHART_SIZE
@@ -124,6 +134,8 @@ def _fetch_chart(timeout: float) -> list[dict]:
                         title: row.querySelector('[data-test-id="charts_userevent_list_songTitle"]')?.getAttribute('aria-label'),
                         artists: [...new Set([...row.querySelectorAll('[data-test-id="charts_userevent_list_artistName"]')]
                             .map(element => element.getAttribute('aria-label')).filter(Boolean))],
+                        srcset: row.querySelector('img')?.getAttribute('srcset') || '',
+                        src: row.querySelector('img')?.currentSrc || row.querySelector('img')?.getAttribute('src') || '',
                     }))
                 """)
                 return _validate_tracks(tracks)

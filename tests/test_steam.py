@@ -81,6 +81,10 @@ class SteamParserTests(unittest.TestCase):
                 "steam_app_id": 100001,
                 "rank_last_week": 4,
                 "consecutive_weeks": 1,
+                "cover_url": (
+                    "https://shared.akamai.steamstatic.com/store_item_assets/"
+                    "steam/apps/100001/header.jpg"
+                ),
             },
         )
 

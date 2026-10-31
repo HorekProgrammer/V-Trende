@@ -4,6 +4,8 @@ from html.parser import HTMLParser
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from parser.common.covers import yandex_track_cover
+
 CHART_URL = "https://music.mts.ru/chart"
 CHART_API_URL = "https://api.music.yandex.net/users/324504548/playlists/1480"
 CHART_SIZE = 100
@@ -46,7 +48,8 @@ def _parse_playlist(playlist: dict) -> list[dict]:
                     or not isinstance(raw_artists, list) or not artists
                     or any(not isinstance(artist, str) or not artist.strip() for artist in artists)):
                 raise ValueError
-            result.append({"position": position, "title": title, "artists": artists})
+            result.append({"position": position, "title": title, "artists": artists,
+                           "cover_url": yandex_track_cover(track)})
         return result
     except (AttributeError, KeyError, IndexError, TypeError, ValueError):
         raise RuntimeError(

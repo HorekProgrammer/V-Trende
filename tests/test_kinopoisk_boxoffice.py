@@ -42,6 +42,7 @@ class KinopoiskBoxOfficeTests(unittest.TestCase):
                 "viewers": 527646,
                 "total_viewers": 530843,
                 "copies": 2009,
+                "cover_url": None,
             },
         )
 

@@ -2,6 +2,9 @@ import math
 import re
 from urllib.parse import urljoin
 
+from parser.common.covers import clean_image_url, largest_from_srcset
+from parser.kinopoisk.posters import fill_missing_posters
+
 from playwright.sync_api import (
     TimeoutError as PlaywrightTimeoutError,
     sync_playwright,
@@ -96,6 +99,7 @@ def _parse_row(
     cells,
     title,
     href,
+    cover_url=None,
 ):
     if len(cells) != 8:
         raise RuntimeError(
@@ -136,6 +140,7 @@ def _parse_row(
             cells[7],
             "copies",
         ),
+        "cover_url": clean_image_url(cover_url),
     }
 
 
@@ -165,12 +170,22 @@ def _parse_chart(page):
             for i in range(8)
         ]
 
+        cover_url = None
+        images = row.locator("img")
+        if images.count() > 0:
+            image = images.first
+            cover_url = (
+                largest_from_srcset(image.get_attribute("srcset"))
+                or image.get_attribute("src")
+            )
+
         result.append(
             _parse_row(
                 position=len(result) + 1,
                 cells=cells,
                 title=title,
                 href=href,
+                cover_url=cover_url,
             )
         )
 
@@ -308,12 +323,13 @@ def _fetch_chart(
                 )
 
             chart = _parse_chart(page)
+            if limit is not None:
+                chart = chart[:limit]
+
+            fill_missing_posters(page, chart, timeout)
 
         finally:
             browser.close()
-
-    if limit is not None:
-        return chart[:limit]
 
     return chart
 

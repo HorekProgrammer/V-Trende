@@ -12,7 +12,8 @@ CATEGORY_LABELS = {
 CARD_COLUMNS = """
     week_start, category, rank, score, source_score, wordstat_score,
     trend_id, title, subtitle, genre,
-    prev_rank, peak_rank, weeks_in_top, first_seen_week, is_new, search_count
+    prev_rank, peak_rank, weeks_in_top, first_seen_week, is_new, search_count,
+    cover_url
 """
 
 
@@ -45,6 +46,7 @@ def card(record: dict) -> dict:
         "genre": record["genre"],
         "isNew": record["is_new"],
         "searchCount": record["search_count"],
+        "cover": record["cover_url"],
     }
 
 

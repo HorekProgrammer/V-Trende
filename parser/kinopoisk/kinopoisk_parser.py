@@ -1,6 +1,10 @@
 import math
 import re
 
+from parser.common.covers import clean_image_url, largest_from_srcset
+
+from .posters import fill_missing_posters, kinopoisk_image_url
+
 CHART_URL = "https://www.kinopoisk.ru/lists/movies/popular-films/"
 CHART_SIZE = 1000
 PAGE_SIZE = 50
@@ -8,6 +12,14 @@ PAGE_SIZE = 50
 _FILM_URL_RE = re.compile(r"^/film/(\d+)/?$")
 _YEAR_RE = re.compile(r"(?:^|\D)((?:19|20)\d{2})(?!\d)")
 _RATING_RE = re.compile(r"Рейтинг Кинопоиска\s+(\d+(?:[.,]\d+)?)")
+
+
+def _cover_url(item: dict) -> str | None:
+    for candidate in (largest_from_srcset(item.get("srcset")), item.get("src")):
+        url = kinopoisk_image_url(candidate) or clean_image_url(candidate)
+        if url:
+            return url
+    return None
 
 
 def _parse_page(items: list[dict], page_number: int) -> list[dict]:
@@ -68,6 +80,7 @@ def _parse_page(items: list[dict], page_number: int) -> list[dict]:
                 "kinopoisk_id": kinopoisk_id,
                 "year": year,
                 "rating": rating,
+                "cover_url": _cover_url(item),
             })
 
     except (KeyError, TypeError, ValueError):
@@ -149,6 +162,18 @@ def _fetch_chart(limit: int | None, timeout: float) -> list[dict]:
                         timeout=timeout * 1000,
                     )
 
+                    page.evaluate(
+                        """
+                        async () => {
+                            for (let y = 0; y < document.body.scrollHeight; y += 600) {
+                                window.scrollTo(0, y);
+                                await new Promise(resolve => setTimeout(resolve, 120));
+                            }
+                            window.scrollTo(0, 0);
+                        }
+                        """
+                    )
+
                     items = page.evaluate(
                         """
                         () => {
@@ -204,6 +229,8 @@ def _fetch_chart(limit: int | None, timeout: float) -> list[dict]:
                                     href,
                                     title: image.alt,
                                     text,
+                                    srcset: image.getAttribute('srcset') || '',
+                                    src: image.currentSrc || image.getAttribute('src') || '',
                                 });
                             }
 
@@ -213,6 +240,8 @@ def _fetch_chart(limit: int | None, timeout: float) -> list[dict]:
                     )
 
                     result.extend(_parse_page(items, page_number))
+
+                fill_missing_posters(page, result[:target_size], timeout)
 
             finally:
                 browser.close()

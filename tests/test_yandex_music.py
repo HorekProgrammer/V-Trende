@@ -10,7 +10,8 @@ from parser.yandex_music.yandex_music_parser import CHART_URL, parse_chart_html
 def track(number):
     return {"id": str(100 + number), "title": "Песня <3 & музыка", "durationMs": 123456,
             "artists": [{"name": "Артист A"}, {"name": "Артист B"}],
-            "chart": {"position": number}}
+            "chart": {"position": number},
+            "coverUri": f"avatars.yandex.net/get-music-content/9/{number}/%%"}
 
 
 def page(operations):
@@ -28,8 +29,9 @@ class MusicTests(unittest.TestCase):
         tracks = parse_chart_html(page(data()))
         self.assertEqual(len(tracks), 2)
         self.assertEqual(tracks[0], {"title": "Песня <3 & музыка",
-                         "artists": ["Артист A", "Артист B"], "position": 1})
-        self.assertTrue(all(set(t) == {"title", "artists", "position"} for t in tracks))
+                         "artists": ["Артист A", "Артист B"], "position": 1,
+                         "cover_url": "https://avatars.yandex.net/get-music-content/9/1/400x400"})
+        self.assertTrue(all(set(t) == {"title", "artists", "position", "cover_url"} for t in tracks))
 
     def test_removed_fields_are_not_required(self):
         operations = data()

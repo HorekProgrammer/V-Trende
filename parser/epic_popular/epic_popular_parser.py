@@ -2,11 +2,13 @@ import json
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from parser.common.covers import epic_cover_url
+
 
 GRAPHQL_URL = "https://store.epicgames.com/graphql"
 CHART_SIZE = 50
 
-QUERY = """
+_QUERY_TEMPLATE = """
 query collectionLayoutQuery($locale: String, $slug: String) {
   Storefront {
     collectionLayout(locale: $locale, slug: $slug) {
@@ -18,17 +20,45 @@ query collectionLayoutQuery($locale: String, $slug: String) {
           mappings(pageType: "productHome") {
             pageSlug
           }
-        }
+        }%s
       }
     }
   }
 }
 """
 
+QUERY_WITH_IMAGES = _QUERY_TEMPLATE % """
+        keyImages {
+          type
+          url
+        }"""
+QUERY = _QUERY_TEMPLATE % ""
+
+
+def _has_offers(payload):
+    try:
+        offers = (
+            payload["data"]["Storefront"]
+            ["collectionLayout"]["collectionOffers"]
+        )
+    except (KeyError, TypeError):
+        return False
+    return isinstance(offers, list)
+
 
 def _fetch_payload(timeout):
+    try:
+        payload = _request(QUERY_WITH_IMAGES, timeout)
+    except RuntimeError:
+        payload = None
+    if _has_offers(payload):
+        return payload
+    return _request(QUERY, timeout)
+
+
+def _request(query, timeout):
     payload = {
-        "query": QUERY,
+        "query": query,
         "variables": {
             "locale": "ru",
             "slug": "most-popular",
@@ -125,6 +155,7 @@ def _parse_chart(payload):
                 "epic_offer_id": offer_id,
                 "epic_namespace": namespace,
                 "epic_slug": _extract_slug(offer),
+                "cover_url": epic_cover_url(offer.get("keyImages")),
             }
         )
 

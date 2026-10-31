@@ -12,6 +12,10 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode, urlparse
 from urllib.request import ProxyHandler, Request, build_opener, urlopen
 
+from parser.common.covers import twitch_avatar_url
+
+from .avatars import fill_missing_avatars
+
 from .channel_classifier import (
     classify_channels,
     fetch_page_markdown,
@@ -57,9 +61,14 @@ class _RankingParser(HTMLParser):
         elif self.in_body and tag == "tr":
             self.row = []
         elif self.row is not None and tag == "td":
-            self.cell = {"text": [], "href": None}
+            self.cell = {"text": [], "href": None, "img": None}
         elif self.cell is not None and tag == "a" and self.cell["href"] is None:
             self.cell["href"] = attributes.get("href")
+        elif self.cell is not None and tag == "img" and self.cell["img"] is None:
+            for name in ("data-src", "data-original", "data-lazy-src", "src"):
+                if twitch_avatar_url(attributes.get(name)):
+                    self.cell["img"] = attributes.get(name)
+                    break
 
     def handle_data(self, data):
         if self.cell is not None:
@@ -107,6 +116,7 @@ def _parse_ranking_entries(html: str, *, expected_start: int | None = None) -> l
                 "channel": channel,
                 "total_followers": _integer(cells[9]["text"]),
                 "_slug": slug_match.group(1),
+                "_cover": twitch_avatar_url(cells[1]["img"] or cells[2]["img"]),
             })
     except (TypeError, ValueError):
         raise RuntimeError(
@@ -132,19 +142,25 @@ def parse_ranking_html(html: str, *, expected_start: int | None = None) -> list[
 def parse_ranking_positions_html(html: str, *, expected_start: int | None = None) -> list[dict]:
     """Позиции каналов в рейтинге без статистики: для сохранения в базу."""
     return [
-        {"position": entry["position"], "channel": entry["channel"], "slug": entry["_slug"]}
+        {"position": entry["position"], "channel": entry["channel"], "slug": entry["_slug"],
+         "cover_url": entry["_cover"]}
         for entry in _parse_ranking_entries(html, expected_start=expected_start)
     ]
 
 
+_JTVNW_IMAGE_RE = re.compile(r"https://static-cdn\.jtvnw\.net/jtv_user_pictures/[^\s)\]\"'|]+")
+
+
 def parse_ranking_markdown(markdown: str, *, expected_start: int | None = None) -> list[dict]:
     result = []
-    for match in re.finditer(r"(?m)^#(\d+)\s*\|\s*([A-Za-z0-9_]+)\s*\|", markdown):
+    for match in re.finditer(r"(?m)^#(\d+)\s*\|\s*([A-Za-z0-9_]+)\s*\|.*$", markdown):
+        avatar = _JTVNW_IMAGE_RE.search(match.group(0))
         result.append({
             "position": int(match.group(1)),
             "channel": match.group(2),
             "total_followers": 0,
             "_slug": match.group(2).lower(),
+            "_cover": twitch_avatar_url(avatar.group(0)) if avatar else None,
         })
     if not result:
         raise RuntimeError("DeepSeek Fetch: TwitchTracker ranking table was not found.")
@@ -385,6 +401,7 @@ def _fetch_candidates(limit: int, timeout: float) -> list[dict]:
             "channel": channel["channel"],
             "total_followers": 0,
             "_slug": slug,
+            "_cover": None,
         })
         known.add(slug)
     return result
@@ -407,7 +424,8 @@ def get_russian_twitch_positions(limit: int = MAX_CHANNELS, *, timeout: float = 
     """Только позиции каналов в рейтинге — без запросов статистики каждого канала."""
     _validate_arguments(limit, timeout)
     return [
-        {"position": entry["position"], "channel": entry["channel"], "slug": entry["_slug"]}
+        {"position": entry["position"], "channel": entry["channel"], "slug": entry["_slug"],
+         "cover_url": entry.get("_cover")}
         for entry in _fetch_personal_candidates(limit, timeout)
     ]
 
@@ -465,6 +483,7 @@ def get_russian_twitch_ranking(
             "channel": entry["channel"],
             "slug": slug,
             "total_followers": entry["total_followers"],
+            "cover_url": entry.get("_cover"),
             **stats,
         })
     return result
@@ -472,4 +491,6 @@ def get_russian_twitch_ranking(
 
 def get_cached_russian_twitch_ranking(limit: int = MAX_CHANNELS, *, timeout: float = 30) -> list[dict]:
     """Полный недельный рейтинг с поканальным возобновлением после сетевого сбоя."""
-    return get_russian_twitch_ranking(limit, timeout=timeout, cache_path=_weekly_cache_path())
+    ranking = get_russian_twitch_ranking(limit, timeout=timeout, cache_path=_weekly_cache_path())
+    fill_missing_avatars(ranking, timeout=timeout)
+    return ranking

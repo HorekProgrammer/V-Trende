@@ -9,6 +9,9 @@ def chart_page(size=200):
     for position in range(1, size + 1):
         rows.append(f'''<li>
             <span class="x SongItem_rankingNumber_abc">{position}</span>
+            <img src="https://is1-ssl.mzstatic.com/image/thumb/{position}/160x160bb.jpg"
+                 srcset="https://is1-ssl.mzstatic.com/image/thumb/{position}/160x160bb.jpg 1x,
+                         https://is1-ssl.mzstatic.com/image/thumb/{position}/320x320bb.jpg 2x">
             <a data-test-id="charts_userevent_list_songTitle" aria-label="Трек {position}"></a>
             <a data-test-id="charts_userevent_list_songTitle" aria-label="Трек {position}"></a>
             <a data-test-id="charts_userevent_list_artistName" aria-label="Исполнитель {position}"></a>
@@ -24,9 +27,10 @@ class ShazamTests(unittest.TestCase):
             "position": 1,
             "title": "Трек 1",
             "artists": ["Исполнитель 1"],
+            "cover_url": "https://is1-ssl.mzstatic.com/image/thumb/1/320x320bb.jpg",
         })
         self.assertEqual(result[-1]["position"], 200)
-        self.assertTrue(all(set(track) == {"position", "title", "artists"} for track in result))
+        self.assertTrue(all(set(track) == {"position", "title", "artists", "cover_url"} for track in result))
 
     def test_preserves_displayed_artist_name(self):
         html = chart_page().replace(
