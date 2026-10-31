@@ -2,6 +2,7 @@
 
 Пакет чарта отправляется POST-запросом на {BACKEND_URL}/api/v1/internal/update-trends,
 пакет Wordstat — на {BACKEND_URL}/api/v1/internal/update-search-stats,
+пакет игровой аудитории — на {BACKEND_URL}/api/v1/internal/update-game-audience-stats,
 с заголовком Authorization: Bearer {INTERNAL_API_TOKEN}. Пока BACKEND_URL не задан,
 пакет сохраняется в data/outbox/; оттуда его загружает python -m database.load_outbox.
 """
@@ -24,6 +25,7 @@ ENV_FILE = PROJECT_ROOT / ".env"
 OUTBOX_DIR = PROJECT_ROOT / "data" / "outbox"
 ENDPOINT_PATH = "/api/v1/internal/update-trends"
 SEARCH_STATS_ENDPOINT_PATH = "/api/v1/internal/update-search-stats"
+GAME_AUDIENCE_ENDPOINT_PATH = "/api/v1/internal/update-game-audience-stats"
 PUBLISH_RANKINGS_ENDPOINT_PATH = "/api/v1/internal/publish-rankings"
 # Москва живёт в UTC+3 без перехода на летнее время; фиксированный сдвиг
 # не требует пакета tzdata на Windows.
@@ -107,7 +109,12 @@ def _now() -> str:
 
 
 def _endpoint(payload: dict) -> str:
-    return SEARCH_STATS_ENDPOINT_PATH if payload.get("type") == "search_stats" else ENDPOINT_PATH
+    kind = payload.get("type")
+    if kind == "search_stats":
+        return SEARCH_STATS_ENDPOINT_PATH
+    if kind == "game_audience_stats":
+        return GAME_AUDIENCE_ENDPOINT_PATH
+    return ENDPOINT_PATH
 
 
 def _post_to(payload: dict, endpoint: str, backend_url: str, token: str, timeout: float) -> str:
@@ -143,6 +150,8 @@ def _post(payload: dict, backend_url: str, token: str, timeout: float) -> str:
 def _file_stem(payload: dict) -> str:
     if payload.get("type") == "search_stats":
         parts = [payload["week_start"], "wordstat"]
+    elif payload.get("type") == "game_audience_stats":
+        parts = [payload["week_start"], "whatstat-games"]
     else:
         parts = [payload["week_start"], payload["source"], payload["chart"]]
         if payload.get("status") == "failed":

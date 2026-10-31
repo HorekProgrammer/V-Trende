@@ -39,6 +39,7 @@ FROM current_trends w
 JOIN trends t ON t.id = w.trend_id
 LEFT JOIN trend_search_stats s ON s.trend_id = t.id AND s.week_start = %s
 WHERE s.trend_id IS NULL
+  AND t.category <> 'games'
 ORDER BY t.category, t.title, t.id
 """
 

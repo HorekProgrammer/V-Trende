@@ -12,7 +12,8 @@
 Типы пакетов:
   * чарт (type = "chart")              — позиции за неделю (parser/common/upload.py);
   * неудачный сбор (status = "failed") — чарт за неделю собрать не удалось;
-  * Wordstat (type = "search_stats")   — частота запросов (parser/wordstat_batch.py).
+  * Wordstat (type = "search_stats") — частота запросов (parser/wordstat_batch.py);
+  * Whatstat (type = "game_audience_stats") — средняя Twitch-аудитория игр за 7 дней.
 """
 
 import argparse
@@ -368,6 +369,59 @@ def load_search_stats(conn, payload: dict) -> str:
     return f"Wordstat за {week}: {saved} значений{note}"
 
 
+def load_game_audience_stats(conn, payload: dict) -> str:
+    week = _week(payload)
+    collected_at = _collected_at(payload)
+    saved = missing = 0
+    entries = _entries(payload)
+    if not entries:
+        raise PayloadError("В пакете Whatstat нет игровых категорий.")
+    for raw in entries:
+        match_key = _text(raw, "match_key")
+        source_title = _text(raw, "source_title", max_length=300)
+        source_category_id = _text(raw, "source_category_id", max_length=100)
+        source_url = _text(raw, "source_url", max_length=2000)
+        position = raw.get("position")
+        average_viewers = raw.get("average_viewers")
+        if type(position) is not int or position <= 0:
+            raise PayloadError(f"position должен быть положительным целым: {position!r}.")
+        if type(average_viewers) is not int or average_viewers < 0:
+            raise PayloadError(
+                f"average_viewers должен быть неотрицательным целым: {average_viewers!r}."
+            )
+        row = conn.execute(
+            "SELECT id FROM trends WHERE category = 'games' AND match_key = %s",
+            (match_key,),
+        ).fetchone()
+        if row is None:
+            missing += 1
+            continue
+        conn.execute(
+            """
+            INSERT INTO game_audience_stats (
+                trend_id, week_start, source_title, source_category_id,
+                source_url, position, average_viewers, collected_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, COALESCE(%s, NOW()))
+            ON CONFLICT (trend_id, week_start) DO UPDATE SET
+                source_title = EXCLUDED.source_title,
+                source_category_id = EXCLUDED.source_category_id,
+                source_url = EXCLUDED.source_url,
+                position = EXCLUDED.position,
+                average_viewers = EXCLUDED.average_viewers,
+                collected_at = EXCLUDED.collected_at
+            """,
+            (
+                row[0], week, source_title, source_category_id, source_url,
+                position, average_viewers, collected_at,
+            ),
+        )
+        saved += 1
+    if not saved:
+        raise PayloadError("Ни одна категория Whatstat не найдена среди игр в базе.")
+    note = f", объектов нет в базе: {missing}" if missing else ""
+    return f"Whatstat за {week}: {saved} игровых категорий{note}"
+
+
 def load_payload(conn, payload: dict) -> str:
     """Записывает один пакет. Вызывать внутри транзакции (см. load_file)."""
     if not isinstance(payload, dict):
@@ -375,6 +429,8 @@ def load_payload(conn, payload: dict) -> str:
     kind = payload.get("type", "chart")
     if kind == "search_stats":
         return load_search_stats(conn, payload)
+    if kind == "game_audience_stats":
+        return load_game_audience_stats(conn, payload)
     if kind != "chart":
         raise PayloadError(f"Неизвестный тип пакета: {kind!r}.")
     if payload.get("status") == "failed":

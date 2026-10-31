@@ -8,6 +8,7 @@ __pycache__/
 .env.*
 !.env.example
 *.log
+*.dump
 data/
 cookie.txt
 vk.txt

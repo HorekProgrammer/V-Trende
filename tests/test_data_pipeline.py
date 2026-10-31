@@ -27,7 +27,10 @@ def env(**values):
 class MigrationFilesTests(unittest.TestCase):
     def test_project_migrations_are_ordered_and_named(self):
         migrations = discover()
-        self.assertEqual([m.version for m in migrations], ["001", "002", "003", "004", "005", "006", "007", "008", "009"])
+        self.assertEqual(
+            [m.version for m in migrations],
+            ["001", "002", "003", "004", "005", "006", "007", "008", "009", "010"],
+        )
         self.assertTrue(all(m.sql.strip() for m in migrations))
 
     def test_bad_name_and_duplicate_number_are_rejected(self):
@@ -88,6 +91,17 @@ class FailurePayloadTests(unittest.TestCase):
         with env(BACKEND_URL="http://api", INTERNAL_API_TOKEN="t"):
             save_payload({"type": "search_stats", "week_start": "2026-10-19", "entries": []})
         self.assertEqual(opened.call_args.args[0].full_url, "http://api/api/v1/internal/update-search-stats")
+
+    @patch("parser.common.upload.urlopen")
+    def test_game_audience_goes_to_its_endpoint(self, opened):
+        from parser.common import save_payload
+        opened.return_value.__enter__.return_value.status = 200
+        with env(BACKEND_URL="http://api", INTERNAL_API_TOKEN="t"):
+            save_payload({"type": "game_audience_stats", "week_start": "2026-10-19", "entries": []})
+        self.assertEqual(
+            opened.call_args.args[0].full_url,
+            "http://api/api/v1/internal/update-game-audience-stats",
+        )
 
 
 class BoxOfficeAdapterTests(unittest.TestCase):
@@ -154,6 +168,7 @@ class RunAllFailureTests(unittest.TestCase):
         with patch.dict(run_all.CHARTS, {"vk": chart}, clear=True), \
                 patch("parser.run_all.missing_chart_keys", return_value=(["vk"], [])), \
                 patch("parser.run_all.save_chart_failure", return_value="ok") as recorded, \
+                patch("parser.run_all.run_whatstat", return_value=0), \
                 patch("parser.run_all.run_wordstat", return_value=0) as wordstat, \
                 redirect_stderr(io.StringIO()) as err:
             code = run_all.main(["--save"])
@@ -177,6 +192,7 @@ class RunAllFailureTests(unittest.TestCase):
         with patch.dict(run_all.CHARTS, {"vk": chart}, clear=True), \
                 patch("parser.run_all.missing_chart_keys", return_value=(["vk"], [])), \
                 patch("parser.run_all.save_chart", return_value="ok"), \
+                patch("parser.run_all.run_whatstat", return_value=0), \
                 patch("parser.run_all.run_wordstat", return_value=1), \
                 redirect_stderr(io.StringIO()):
             self.assertEqual(run_all.main(["--save"]), 1)
@@ -186,6 +202,7 @@ class RunAllFailureTests(unittest.TestCase):
         with patch.dict(run_all.CHARTS, {}, clear=True), \
                 patch("parser.run_all.week_start", return_value=current_week), \
                 patch("parser.run_all.missing_chart_keys", return_value=([], [])) as missing, \
+                patch("parser.run_all.run_whatstat", return_value=0) as whatstat, \
                 patch("parser.run_all.run_wordstat", return_value=0) as wordstat, \
                 redirect_stderr(io.StringIO()):
             self.assertEqual(
@@ -195,7 +212,17 @@ class RunAllFailureTests(unittest.TestCase):
 
         target = date(2026, 11, 2)
         missing.assert_called_once_with([], target)
+        whatstat.assert_called_once_with(target)
         wordstat.assert_called_once_with(target, publish=False)
+
+    def test_whatstat_failure_prevents_publication(self):
+        with patch.dict(run_all.CHARTS, {}, clear=True), \
+                patch("parser.run_all.missing_chart_keys", return_value=([], [])), \
+                patch("parser.run_all.run_whatstat", return_value=1), \
+                patch("parser.run_all.run_wordstat") as wordstat, \
+                redirect_stderr(io.StringIO()):
+            self.assertEqual(run_all.main(["--save"]), 1)
+        wordstat.assert_not_called()
 
 
 class WordstatBatchTests(unittest.TestCase):

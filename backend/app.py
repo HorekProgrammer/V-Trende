@@ -150,6 +150,18 @@ def update_search_stats(payload: dict, conn: Db, _auth: InternalAuth):
     return result
 
 
+@app.post("/api/v1/internal/update-game-audience-stats")
+def update_game_audience_stats(payload: dict, conn: Db, _auth: InternalAuth):
+    publish = payload.get("publish", False)
+    if type(publish) is not bool:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Поле publish должно быть boolean.")
+    result = ingest_payload(payload, conn, "game_audience_stats")
+    if publish:
+        refresh_rankings(conn)
+    result["rankingsRefreshed"] = publish
+    return result
+
+
 @app.post("/api/v1/internal/publish-rankings")
 def publish_rankings(conn: Db, _auth: InternalAuth):
     refresh_rankings(conn)

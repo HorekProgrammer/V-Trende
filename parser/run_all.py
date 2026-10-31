@@ -1,7 +1,7 @@
 """Еженедельный сбор всех чартов.
 
     python -m parser.run_all            # собрать и показать сводку, ничего не сохраняя
-    python -m parser.run_all --save     # собрать недостающие, Wordstat и рейтинг
+    python -m parser.run_all --save     # собрать недостающие, Whatstat/Wordstat и рейтинг
     python -m parser.run_all --save --force  # пересобрать все чарты этой недели
     python -m parser.run_all --save --next-week --defer-publish  # воскресная подготовка
     python -m parser.run_all --only steam twitch --save
@@ -12,8 +12,8 @@
 не собран или не сохранён, процесс завершается с кодом 1.
 
 При --save успешно собранные за текущую неделю чарты пропускаются. После
-недостающих парсеров запускается Wordstat; его загрузка атомарно публикует
-пересчитанный рейтинг для backend и frontend.
+недостающих парсеров запускаются Whatstat для игр и Wordstat для остальных
+категорий; финальная загрузка атомарно публикует рейтинг для backend и frontend.
 """
 
 import argparse
@@ -58,6 +58,14 @@ def run_wordstat(week: date | None = None, *, publish: bool = True) -> int:
     return wordstat_batch.main(args)
 
 
+def run_whatstat(week: date | None = None) -> int:
+    from parser import whatstat_batch
+    args = ["--save", "--pages", "10"]
+    if week is not None:
+        args.extend(["--week", week.isoformat()])
+    return whatstat_batch.main(args)
+
+
 def run_chart(key: str, save: bool, week: date | None = None) -> tuple[bool, str]:
     chart = CHARTS[key]
     try:
@@ -86,7 +94,7 @@ def main(argv: list[str] | None = None) -> int:
     cli.add_argument("--only", nargs="+", choices=sorted(CHARTS), metavar="CHART",
                      help=f"Только указанные чарты: {', '.join(CHARTS)}")
     cli.add_argument("--skip-wordstat", action="store_true",
-                     help="Не запускать Wordstat после сохранения чартов")
+                     help="Не запускать Whatstat и Wordstat после сохранения чартов")
     cli.add_argument("--force", action="store_true",
                      help="Пересобрать уже сохранённые чарты текущей недели")
     week_group = cli.add_mutually_exclusive_group()
@@ -129,13 +137,18 @@ def main(argv: list[str] | None = None) -> int:
     if failed:
         print(f"С ошибкой: {', '.join(failed)}", file=sys.stderr)
 
+    whatstat_failed = False
     wordstat_failed = False
     if args.save and not args.skip_wordstat:
-        print("\n[wordstat] запуск…", file=sys.stderr, flush=True)
-        wordstat_failed = run_wordstat(target_week, publish=not args.defer_publish) != 0
-        print(f"[wordstat] {'ОШИБКА' if wordstat_failed else 'OK'}", file=sys.stderr, flush=True)
+        print("\n[whatstat] запуск…", file=sys.stderr, flush=True)
+        whatstat_failed = run_whatstat(target_week) != 0
+        print(f"[whatstat] {'ОШИБКА' if whatstat_failed else 'OK'}", file=sys.stderr, flush=True)
+        if not whatstat_failed:
+            print("\n[wordstat] запуск…", file=sys.stderr, flush=True)
+            wordstat_failed = run_wordstat(target_week, publish=not args.defer_publish) != 0
+            print(f"[wordstat] {'ОШИБКА' if wordstat_failed else 'OK'}", file=sys.stderr, flush=True)
 
-    return 1 if failed or wordstat_failed else 0
+    return 1 if failed or whatstat_failed or wordstat_failed else 0
 
 
 if __name__ == "__main__":
