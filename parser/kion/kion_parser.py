@@ -5,6 +5,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from parser.common.covers import yandex_track_cover
+from parser.common.years import yandex_track_year
 
 CHART_URL = "https://music.mts.ru/chart"
 CHART_API_URL = "https://api.music.yandex.net/users/324504548/playlists/1480"
@@ -49,7 +50,8 @@ def _parse_playlist(playlist: dict) -> list[dict]:
                     or any(not isinstance(artist, str) or not artist.strip() for artist in artists)):
                 raise ValueError
             result.append({"position": position, "title": title, "artists": artists,
-                           "cover_url": yandex_track_cover(track)})
+                           "cover_url": yandex_track_cover(track),
+                           "year": yandex_track_year(track)})
         return result
     except (AttributeError, KeyError, IndexError, TypeError, ValueError):
         raise RuntimeError(

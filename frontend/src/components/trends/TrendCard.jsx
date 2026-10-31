@@ -1,5 +1,5 @@
 import './TrendCard.css';
-import { fmtSearches } from '../../utils/trendFormat';
+import { fmtSearches, subtitleWithYear } from '../../utils/trendFormat';
 import Cover from '../common/Cover';
 
 
@@ -19,7 +19,7 @@ export default function TrendCard({ item, onClick }) {
       <Cover item={item} className="row-cover" />
       <div className="row-info">
         <div className="row-title">{item.title}</div>
-        <div className="row-sub">{item.subtitle}</div>
+        <div className="row-sub">{subtitleWithYear(item)}</div>
       </div>
       <div className="row-views">
         {item.score == null ? fmtSearches(item.searchCount) : `${item.score.toFixed(1)} балла`}

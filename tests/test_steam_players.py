@@ -91,6 +91,7 @@ class SteamPlayersTests(unittest.TestCase):
                     "https://shared.akamai.steamstatic.com/store_item_assets/"
                     "steam/apps/100001/header.jpg"
                 ),
+                "year": None,
             },
         )
 

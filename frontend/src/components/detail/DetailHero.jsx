@@ -1,4 +1,5 @@
 import Cover from '../common/Cover';
+import { subtitleWithYear } from '../../utils/trendFormat';
 import { CATEGORY_THEMES } from '../category/categoryThemes';
 import './DetailHero.css';
 
@@ -20,7 +21,7 @@ export default function DetailHero({ item, category })
              {item.genre && <span className="detail-tag">{item.genre}</span>}
         </div>
         <h1 className="detail-title">{item.title}</h1>
-        <div className="detail-sub">{item.subtitle}</div>
+        <div className="detail-sub">{subtitleWithYear(item)}</div>
       </div>
     </div>
   );

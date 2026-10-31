@@ -29,3 +29,9 @@ export function fmtSearches(n)
   if (n >= 1000) return Math.round(n / 1000) + ' тыс. запросов';
   return n + ' запросов';
 }
+export function subtitleWithYear(item) 
+{
+  const parts = item.subtitle ? [item.subtitle] : [];
+  if (item.year && String(item.year) !== item.subtitle) parts.push(item.year);
+  return parts.join(' · ');
+}

@@ -13,7 +13,7 @@ CARD_COLUMNS = """
     week_start, category, rank, score, source_score, wordstat_score,
     trend_id, title, subtitle, genre,
     prev_rank, peak_rank, weeks_in_top, first_seen_week, is_new, search_count,
-    cover_url
+    cover_url, year
 """
 
 
@@ -47,6 +47,7 @@ def card(record: dict) -> dict:
         "isNew": record["is_new"],
         "searchCount": record["search_count"],
         "cover": record["cover_url"],
+        "year": record.get("year"),
     }
 
 

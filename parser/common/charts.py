@@ -10,6 +10,7 @@ from typing import Callable
 
 from .circuit_breaker import protected_call
 from .covers import clean_image_url
+from .years import valid_year
 from .normalize import match_key
 
 CATEGORY_LIMITS = {
@@ -48,6 +49,7 @@ def _entry(item: dict, *, title: str, key: str, subtitle=None,
         "external_id": None if external_id is None else str(external_id),
         "url": url,
         "cover_url": clean_image_url(item.get("cover_url")),
+        "year": valid_year(item.get("year")),
         "match_key": key,
     }
 
@@ -62,12 +64,18 @@ def music_entry(item: dict) -> dict:
     )
 
 
+def _year_subtitle(item: dict) -> str | None:
+    year = item.get("year")
+    return str(year) if type(year) is int else None
+
+
 def steam_entry(item: dict) -> dict:
     app_id = item["steam_app_id"]
     return _entry(
         item,
         title=item["title"],
         key=match_key(item["title"]),
+        subtitle=_year_subtitle(item),
         external_id=app_id,
         url=f"https://store.steampowered.com/app/{app_id}/",
     )
@@ -79,6 +87,7 @@ def epic_entry(item: dict) -> dict:
         item,
         title=item["title"],
         key=match_key(item["title"]),
+        subtitle=_year_subtitle(item),
         external_id=item["epic_offer_id"],
         url=f"https://store.epicgames.com/ru/p/{slug}" if slug else None,
     )

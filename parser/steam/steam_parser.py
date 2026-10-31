@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from parser.common.covers import steam_cover_url
+from parser.common.years import steam_release_year
 
 
 CHARTS_OVERVIEW_URL = "https://store.steampowered.com/charts/"
@@ -288,6 +289,7 @@ def _parse_chart(payload, timeout):
                 "rank_last_week": last_week_rank,
                 "consecutive_weeks": consecutive_weeks,
                 "cover_url": steam_cover_url(app_id, assets),
+                "year": steam_release_year(item),
             }
         )
 

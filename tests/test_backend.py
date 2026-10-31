@@ -26,6 +26,7 @@ class BackendMappingTests(unittest.TestCase):
             "is_new": False,
             "search_count": 1200,
             "cover_url": "https://avatars.yandex.net/cover.jpg",
+            "year": 2026,
         })
 
         self.assertEqual(result["key"], "42")
@@ -37,6 +38,7 @@ class BackendMappingTests(unittest.TestCase):
         self.assertEqual(result["subtitle"], "")
         self.assertEqual(result["searchCount"], 1200)
         self.assertEqual(result["cover"], "https://avatars.yandex.net/cover.jpg")
+        self.assertEqual(result["year"], 2026)
 
 
 class BackendRouteTests(unittest.TestCase):

@@ -5,6 +5,7 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from parser.common.covers import steam_cover_url
+from parser.common.years import steam_release_year
 
 
 MOST_PLAYED_API_URL = (
@@ -56,6 +57,7 @@ def _fetch_payload(timeout):
         "data_request": {
             "include_basic_info": True,
             "include_assets": True,
+            "include_release": True,
             "include_tag_count": TAG_COUNT,
         },
     }
@@ -299,6 +301,7 @@ def _parse_chart(payload, tag_names):
                 "peak_today": peak_today,
                 "tags": tags,
                 "cover_url": steam_cover_url(app_id, item.get("assets")),
+                "year": steam_release_year(item),
             }
         )
 

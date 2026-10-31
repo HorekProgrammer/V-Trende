@@ -113,7 +113,8 @@ class BuildPayloadTests(unittest.TestCase):
         self.assertEqual(len(payload["entries"]), 100)
         self.assertEqual(payload["entries"][0], {
             "position": 1, "title": "Песня 1", "subtitle": "Артист", "genre": None,
-            "external_id": None, "url": None, "cover_url": None, "match_key": "артист|песня 1",
+            "external_id": None, "url": None, "cover_url": None, "year": None,
+            "match_key": "артист|песня 1",
         })
 
     def test_movies_are_cut_to_50_and_streamers_to_150(self):
@@ -133,7 +134,7 @@ class BuildPayloadTests(unittest.TestCase):
         self.assertEqual(entry, {
             "position": 1, "title": "Dota 2", "subtitle": None, "genre": None,
             "external_id": "570", "url": "https://store.steampowered.com/app/570/", "cover_url": None,
-            "match_key": "dota 2",
+            "year": None, "match_key": "dota 2",
         })
 
     def test_kinopoisk_and_epic_entries(self):
