@@ -109,7 +109,7 @@ class MigrationTests(DatabaseTestCase):
         self.conn.execute((MIGRATIONS_DIR / "001_init.sql").read_text(encoding="utf-8"))
         self.assertEqual(
             migrate(self.conn, baseline="001"),
-            ["002", "003", "004", "005", "006", "007", "008", "009"],
+            ["002", "003", "004", "005", "006", "007", "008", "009", "010"],
         )
 
     def test_genres_are_seeded_and_category_is_enforced(self):
@@ -220,6 +220,23 @@ class LoaderTests(DatabaseTestCase):
         self.load(stats)
         self.assertEqual(self.rows("SELECT search_count FROM trend_search_stats"), [(700,)])
 
+    def test_game_audience_stats(self):
+        self.load(build_payload("steam", steam((1, 1)), week=W1))
+        key = self.scalar("SELECT match_key FROM trends")
+        payload = {"type": "game_audience_stats", "week_start": W1.isoformat(), "entries": [{
+            "match_key": key,
+            "source_title": "Game One",
+            "source_category_id": "game-one",
+            "source_url": "https://whatstat.ru/twitch/categories/game-one",
+            "position": 1,
+            "average_viewers": 12_345,
+        }]}
+        self.load(payload)
+        self.assertEqual(
+            self.rows("SELECT position, average_viewers FROM game_audience_stats"),
+            [(1, 12_345)],
+        )
+
     def test_twitch_weekly_metrics_are_saved(self):
         channel = {
             "position": 1, "channel": "Streamer", "slug": "streamer",
@@ -327,6 +344,35 @@ class RankingTests(DatabaseTestCase):
         )
 
 
+class GameRankingTests(DatabaseTestCase):
+    def test_games_use_best_chart_and_whatstat_instead_of_wordstat(self):
+        self.load(build_payload("steam", steam((1, 1)), week=W1))
+        self.load(build_payload("steam_players", steam((1, 2)), week=W1))
+        keys = dict(self.rows("SELECT title, match_key FROM trends WHERE category = 'games'"))
+        self.load({"type": "search_stats", "week_start": W1.isoformat(), "entries": [
+            {"category": "games", "match_key": keys["Игра 1"], "query": "game one", "search_count": 1_000_000},
+            {"category": "games", "match_key": keys["Игра 2"], "query": "game two", "search_count": 1},
+        ]})
+        self.load({"type": "game_audience_stats", "week_start": W1.isoformat(), "entries": [
+            {"match_key": keys["Игра 1"], "source_title": "Game One", "source_category_id": "one",
+             "source_url": "https://whatstat.ru/twitch/categories/one", "position": 2,
+             "average_viewers": 100},
+            {"match_key": keys["Игра 2"], "source_title": "Game Two", "source_category_id": "two",
+             "source_url": "https://whatstat.ru/twitch/categories/two", "position": 1,
+             "average_viewers": 10_000},
+        ]})
+        self.refresh()
+
+        rows = self.rows(
+            "SELECT title, rank, source_score, wordstat_score, chart_count "
+            "FROM v_category_top_latest WHERE category = 'games' ORDER BY rank"
+        )
+        self.assertEqual(rows[0][0], "Игра 2")
+        self.assertEqual(rows[1][0], "Игра 1")
+        self.assertEqual(rows[0][2:], (100, 100, 1))
+        self.assertEqual(rows[1][2:], (100, 0, 1))
+
+
 class SeedTests(DatabaseTestCase):
     def test_seed_fills_every_category_within_limits(self):
         from database.seed import seed
@@ -338,14 +384,15 @@ class SeedTests(DatabaseTestCase):
             self.assertLessEqual(max_rank, limits[category])
         self.assertGreater(self.scalar("SELECT COUNT(*) FROM trend_search_stats"), 0)
 
-    def test_wordstat_batch_picks_all_chart_trends_without_stats(self):
+    def test_wordstat_batch_skips_games(self):
         from database.seed import seed
         from parser.wordstat_batch import pending_trends
         seed(self.conn, weeks=1, random_seed=3, last_week=W3)
         self.conn.execute("DELETE FROM trend_search_stats")
         pending = pending_trends(self.conn, W3)
         self.assertEqual(len(pending), self.scalar(
-            "SELECT COUNT(DISTINCT trend_id) FROM v_chart_entries WHERE week_start = %s", (W3,)))
+            "SELECT COUNT(DISTINCT trend_id) FROM v_chart_entries "
+            "WHERE week_start = %s AND category <> 'games'", (W3,)))
         self.conn.execute("UPDATE trends SET search_query = 'своя фраза' WHERE match_key = %s",
                           (pending[0]["match_key"],))
         self.assertEqual(pending_trends(self.conn, W3)[0]["query"], "своя фраза")

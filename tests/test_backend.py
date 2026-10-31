@@ -54,6 +54,7 @@ class BackendRouteTests(unittest.TestCase):
         self.assertIn(("/api/v1/trends/{trend_id}/history", "GET"), routes)
         self.assertIn(("/api/v1/internal/update-trends", "POST"), routes)
         self.assertIn(("/api/v1/internal/update-search-stats", "POST"), routes)
+        self.assertIn(("/api/v1/internal/update-game-audience-stats", "POST"), routes)
         self.assertIn(("/api/v1/internal/publish-rankings", "POST"), routes)
 
 
@@ -138,6 +139,20 @@ class ParserIngestionTests(unittest.TestCase):
             headers={"Authorization": "Bearer secret"},
         )
 
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["rankingsRefreshed"])
+        loader.assert_called_once()
+        refresh.assert_not_called()
+
+    @patch("backend.app.load_payload", return_value="audience prepared")
+    @patch("backend.app.refresh_rankings")
+    @patch("backend.app.settings", return_value={"INTERNAL_API_TOKEN": "secret"})
+    def test_game_audience_is_deferred_by_default(self, _settings, refresh, loader):
+        response = self.client.post(
+            "/api/v1/internal/update-game-audience-stats",
+            json={"type": "game_audience_stats", "entries": []},
+            headers={"Authorization": "Bearer secret"},
+        )
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.json()["rankingsRefreshed"])
         loader.assert_called_once()
