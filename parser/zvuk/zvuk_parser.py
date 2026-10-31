@@ -4,6 +4,8 @@ from html.parser import HTMLParser
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from parser.common.covers import zvuk_track_cover
+
 CHART_URL = "https://zvuk.com/top100"
 
 
@@ -49,7 +51,8 @@ def parse_chart_html(html: str) -> list[dict]:
             if (not isinstance(title, str) or not title.strip() or not artists
                     or any(not isinstance(name, str) or not name.strip() for name in artists)):
                 raise ValueError
-            result.append({"position": position, "title": title, "artists": artists})
+            result.append({"position": position, "title": title, "artists": artists,
+                           "cover_url": zvuk_track_cover(track)})
         return result
     except (ValueError, TypeError, KeyError):
         raise RuntimeError("Звук: некорректные данные или неполный топ-100; возможно, формат сайта изменился.") from None

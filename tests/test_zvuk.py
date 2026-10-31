@@ -8,7 +8,9 @@ from parser.zvuk.zvuk_parser import CHART_URL
 
 
 def tracks():
-    return [{"title": f"Песня {i} & <3", "artists": [{"name": "Первый"}, {"name": "Второй"}]} for i in range(100)]
+    return [{"title": f"Песня {i} & <3", "artists": [{"name": "Первый"}, {"name": "Второй"}],
+             "image": {"src": f"https://cdn-image.zvuk.com/pic?type=release&id={i}&size={{size}}&ext=jpg"}}
+            for i in range(100)]
 
 
 def page(items):
@@ -20,9 +22,12 @@ class ZvukTests(unittest.TestCase):
     def test_fields_order_and_multiple_artists(self):
         result = parse_chart_html(page(tracks()))
         self.assertEqual(len(result), 100)
-        self.assertEqual(result[0], {"position": 1, "title": "Песня 0 & <3", "artists": ["Первый", "Второй"]})
+        self.assertEqual(result[0], {
+            "position": 1, "title": "Песня 0 & <3", "artists": ["Первый", "Второй"],
+            "cover_url": "https://cdn-image.zvuk.com/pic?type=release&id=0&size=400x400&ext=jpg",
+        })
         self.assertEqual([r["position"] for r in result], list(range(1, 101)))
-        self.assertTrue(all(set(r) == {"position", "title", "artists"} for r in result))
+        self.assertTrue(all(set(r) == {"position", "title", "artists", "cover_url"} for r in result))
 
     def test_missing_or_invalid_json(self):
         for html in ('<html>Servicepipe</html>', '<script id="__NEXT_DATA__">bad</script>', '<script id="__NEXT_DATA__">{}</script>'):

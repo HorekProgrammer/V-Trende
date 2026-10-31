@@ -25,6 +25,7 @@ class BackendMappingTests(unittest.TestCase):
             "genre": "Поп",
             "is_new": False,
             "search_count": 1200,
+            "cover_url": "https://avatars.yandex.net/cover.jpg",
         })
 
         self.assertEqual(result["key"], "42")
@@ -35,6 +36,7 @@ class BackendMappingTests(unittest.TestCase):
         self.assertEqual(result["score"], 92.5)
         self.assertEqual(result["subtitle"], "")
         self.assertEqual(result["searchCount"], 1200)
+        self.assertEqual(result["cover"], "https://avatars.yandex.net/cover.jpg")
 
 
 class BackendRouteTests(unittest.TestCase):

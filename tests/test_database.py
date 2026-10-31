@@ -109,7 +109,7 @@ class MigrationTests(DatabaseTestCase):
         self.conn.execute((MIGRATIONS_DIR / "001_init.sql").read_text(encoding="utf-8"))
         self.assertEqual(
             migrate(self.conn, baseline="001"),
-            ["002", "003", "004", "005", "006", "007"],
+            ["002", "003", "004", "005", "006", "007", "008"],
         )
 
     def test_genres_are_seeded_and_category_is_enforced(self):

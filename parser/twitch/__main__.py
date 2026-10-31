@@ -8,6 +8,7 @@ from . import (
     parse_ranking_html,
     parse_ranking_positions_html,
 )
+from .avatars import fill_missing_avatars
 from parser.common import add_save_argument, resolve_limit, save_or_exit
 
 
@@ -38,6 +39,8 @@ def main():
                 channels = get_russian_twitch_ranking(limit)
     except (ValueError, RuntimeError, OSError) as error:
         cli.exit(1, f"Ошибка: {error}\n")
+    if not args.html:
+        fill_missing_avatars(channels)
     print(json.dumps(channels, ensure_ascii=False, indent=2))
 
     if args.save:

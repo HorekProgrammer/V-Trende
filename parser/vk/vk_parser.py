@@ -9,6 +9,8 @@ from urllib.request import Request, urlopen
 
 from dotenv import dotenv_values
 
+from parser.common.covers import vk_track_cover
+
 CHART_URL = "https://vk.ru/al_audio.php"
 CHART_SIZE = 100
 ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
@@ -80,7 +82,8 @@ def parse_chart_responses(first_response: bytes, remaining_response: bytes) -> l
             artists = [artist.strip() for artist in performer_text.split(",") if artist.strip()]
             if len(track) < 5 or not title or not artists:
                 raise ValueError
-            result.append({"position": position, "title": title, "artists": artists})
+            result.append({"position": position, "title": title, "artists": artists,
+                           "cover_url": vk_track_cover(track)})
     except (IndexError, TypeError, ValueError):
         raise RuntimeError("VK Музыка: некорректная строка чарта; возможно, формат сайта изменился.") from None
 

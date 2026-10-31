@@ -4,6 +4,8 @@ from html.parser import HTMLParser
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from parser.common.covers import apple_artwork_url
+
 CHART_URL = "https://music.apple.com/us/playlist/top-100-russia/pl.728bd30a9247487c80a483f4168a9dcd"
 CHART_SIZE = 100
 
@@ -52,7 +54,8 @@ def parse_chart_html(html: str) -> list[dict]:
                     or not isinstance(artist_links, list) or not artists
                     or any(not isinstance(artist, str) or not artist.strip() for artist in artists)):
                 raise ValueError
-            result.append({"position": position, "title": title, "artists": artists})
+            result.append({"position": position, "title": title, "artists": artists,
+                           "cover_url": apple_artwork_url(item.get("artwork"))})
         return result
     except (json.JSONDecodeError, KeyError, IndexError, TypeError, ValueError):
         raise RuntimeError(

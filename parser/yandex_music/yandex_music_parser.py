@@ -5,6 +5,8 @@ import re
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from parser.common.covers import yandex_track_cover
+
 CHART_URL = "https://music.yandex.ru/chart"
 _PATCH = re.compile(
     r"window\.__PAGE_STATE_PATCHES__\s*\[\s*['\"]pages/chart['\"]\s*\]\.push\s*\(\s*"
@@ -45,6 +47,7 @@ def _normalize(track: dict) -> dict:
             "title": title,
             "artists": artists,
             "position": position,
+            "cover_url": yandex_track_cover(track),
         }
     except (KeyError, TypeError, ValueError):
         raise RuntimeError("Яндекс Музыка: изменилась структура данных трека.") from None

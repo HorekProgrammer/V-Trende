@@ -1,4 +1,4 @@
-import { coverGrad, initials } from '../../utils/trendFormat';
+import Cover from '../common/Cover';
 import { CATEGORY_THEMES } from '../category/categoryThemes';
 import './DetailHero.css';
 
@@ -8,9 +8,7 @@ export default function DetailHero({ item, category })
 
   return (
     <div className="detail-hero">
-      <div className="detail-cover" style={{ background: coverGrad(item.key) }}>
-        {initials(item.title)}
-      </div>
+      <Cover item={item} className="detail-cover" />
       <div className="detail-meta">
         <div className="detail-tags">
           <span

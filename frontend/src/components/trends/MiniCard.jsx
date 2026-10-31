@@ -1,13 +1,12 @@
 import './MiniCard.css';
-import { coverGrad, initials, fmtSearches } from '../../utils/trendFormat';
+import { fmtSearches } from '../../utils/trendFormat';
+import Cover from '../common/Cover';
 
 
 export default function MiniCard({ item, onClick }) {
   return (
     <div className="mini-card" onClick={onClick}>
-      <div className="mini-cover" style={{ background: coverGrad(item.key) }}>
-        {initials(item.title)}
-      </div>
+      <Cover item={item} className="mini-cover" />
       <div className="mini-body">
         <div className="mini-tag">{item.categoryLabel || item.sphere}</div>
         <div className="mini-title">{item.title}</div>

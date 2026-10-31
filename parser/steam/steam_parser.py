@@ -6,6 +6,8 @@ from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from parser.common.covers import steam_cover_url
+
 
 CHARTS_OVERVIEW_URL = "https://store.steampowered.com/charts/"
 TOP_SELLERS_API_URL = (
@@ -259,12 +261,15 @@ def _parse_chart(payload, timeout):
 
         item = entry.get("item")
         title = None
+        assets = None
 
         if isinstance(item, dict):
             name = item.get("name")
 
             if isinstance(name, str) and name.strip():
                 title = name.strip()
+
+            assets = item.get("assets")
 
         if title is None:
             title = _fetch_app_name(
@@ -282,6 +287,7 @@ def _parse_chart(payload, timeout):
                 "steam_app_id": app_id,
                 "rank_last_week": last_week_rank,
                 "consecutive_weeks": consecutive_weeks,
+                "cover_url": steam_cover_url(app_id, assets),
             }
         )
 

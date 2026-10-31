@@ -1,4 +1,4 @@
-import { coverGrad, initials} from '../../utils/trendFormat';
+import Cover from '../common/Cover';
 import './LegendRow.css';
 
 
@@ -8,9 +8,7 @@ export default function LegendRow({ item, maxWeeks, onClick })
 
   return (
     <div className="legend-row" onClick={onClick}>
-      <div className="legend-cover" style={{ background: coverGrad(item.key) }}>
-        {initials(item.title)}
-      </div>
+      <Cover item={item} className="legend-cover" />
       <div className="legend-info">
         <div className="legend-title">{item.title}</div>
         <div className="legend-sub">

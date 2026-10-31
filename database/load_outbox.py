@@ -92,6 +92,13 @@ def _nonnegative_number(entry: dict, key: str, *, integer: bool = False) -> int 
     return value
 
 
+def _cover_url(entry: dict) -> str | None:
+    url = _text(entry, "cover_url", required=False, max_length=2000)
+    if url is not None and not url.startswith("https://"):
+        raise PayloadError(f"Поле 'cover_url' должно быть https-ссылкой: {url!r}.")
+    return url
+
+
 def _chart_entry(entry: dict, source: str) -> dict:
     position = entry.get("position")
     if type(position) is not int or not 1 <= position <= MAX_POSITION:
@@ -103,6 +110,7 @@ def _chart_entry(entry: dict, source: str) -> dict:
         "genre": _text(entry, "genre", required=False, max_length=100),
         "external_id": _text(entry, "external_id", required=False, max_length=200),
         "url": _text(entry, "url", required=False, max_length=2000),
+        "cover_url": _cover_url(entry),
         "match_key": _text(entry, "match_key"),
     }
     if source == "twitch":
@@ -178,6 +186,13 @@ def _resolve_trend(conn, source: str, category: str, entry: dict) -> int:
             ON CONFLICT DO NOTHING
             """,
             (trend_id, source, entry["external_id"], entry["url"]),
+        )
+
+    if entry["cover_url"] is not None:
+        conn.execute(
+            """UPDATE trends SET cover_url = %s, cover_source = %s
+               WHERE id = %s AND (cover_url IS NULL OR cover_source = %s)""",
+            (entry["cover_url"], source, trend_id, source),
         )
 
     if entry["genre"] is not None:

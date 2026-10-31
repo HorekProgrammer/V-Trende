@@ -27,7 +27,7 @@ def page(start=1, count=50):
     for position in range(start, start + count):
         rows.append(f"""
         <tr>
-          <td>#{position}</td><td><img></td>
+          <td>#{position}</td><td><img src="https://static-cdn.jtvnw.net/jtv_user_pictures/ch{position}-profile_image-70x70.png"></td>
           <td><a href="/channel_{position}">Канал {position}</a></td>
           <td>{position * 10}</td><td>{position + 0.5}<br><small>hours</small></td>
           <td>{position * 100}</td><td>{position * 1000}</td><td>{position + 20}</td>

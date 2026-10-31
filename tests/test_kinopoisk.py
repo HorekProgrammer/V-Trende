@@ -22,6 +22,8 @@ def chart_page(page_number=1, size=50):
                 f"7.5\n"
                 f"10 000 оценок"
             ),
+            "src": f"//avatars.mds.yandex.net/get-kinopoisk-image/1/{position}/68x102",
+            "srcset": f"//avatars.mds.yandex.net/get-kinopoisk-image/1/{position}/136x204 2x",
         }
         for position in range(start, start + size)
     ]
@@ -39,9 +41,26 @@ class KinopoiskTests(unittest.TestCase):
             "kinopoisk_id": 1000001,
             "year": 2026,
             "rating": 7.5,
+            "cover_url": "https://avatars.mds.yandex.net/get-kinopoisk-image/1/1/136x204",
         })
 
         self.assertEqual(result[-1]["position"], 50)
+
+    def test_poster_is_optional(self):
+        items = chart_page()
+        items[0]["src"] = "data:image/gif;base64,R0lGODlhAQABAAAAACw="
+        items[0]["srcset"] = ""
+        del items[1]["src"], items[1]["srcset"]
+        items[2]["srcset"] = ""
+
+        result = _parse_page(items, 1)
+
+        self.assertIsNone(result[0]["cover_url"])
+        self.assertIsNone(result[1]["cover_url"])
+        self.assertEqual(
+            result[2]["cover_url"],
+            "https://avatars.mds.yandex.net/get-kinopoisk-image/1/3/68x102",
+        )
 
     def test_second_page_positions_start_from_51(self):
         result = _parse_page(chart_page(page_number=2), 2)
