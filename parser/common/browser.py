@@ -63,6 +63,20 @@ def fetch_html(profile: str, url: str, *, wait_selector: str, timeout: float,
 
     profile_dir = BROWSER_DIR / f"{profile}_profile"
     profile_dir.mkdir(parents=True, exist_ok=True)
+    # A killed one-shot Docker container leaves Chromium's Singleton symlinks
+    # pointing to a socket inside the old container. Chromium then exits before
+    # Playwright can create a context. Remove only demonstrably stale locks.
+    socket_lock = profile_dir / "SingletonSocket"
+    try:
+        socket_target = Path(socket_lock.readlink())
+    except OSError:
+        socket_target = None
+    if socket_target is not None and socket_target.is_absolute() and not socket_target.exists():
+        for name in ("SingletonCookie", "SingletonLock", "SingletonSocket"):
+            try:
+                (profile_dir / name).unlink()
+            except FileNotFoundError:
+                pass
     try:
         with sync_playwright() as playwright:
             # channel="chromium" — полный Chromium, как в парсерах Кинопоиска:

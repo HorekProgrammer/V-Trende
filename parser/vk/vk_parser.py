@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import ProxyHandler, Request, build_opener, urlopen
 
 from dotenv import dotenv_values
 
@@ -93,7 +93,7 @@ def parse_chart_responses(first_response: bytes, remaining_response: bytes) -> l
     return result
 
 
-def _request(data: dict, cookie: str, user_agent: str, timeout: float) -> bytes:
+def _request(data: dict, cookie: str, user_agent: str, timeout: float, proxy: str = "") -> bytes:
     request = Request(
         CHART_URL,
         data=urlencode(data).encode(),
@@ -109,7 +109,13 @@ def _request(data: dict, cookie: str, user_agent: str, timeout: float) -> bytes:
         method="POST",
     )
     try:
-        with urlopen(request, timeout=timeout) as response:
+        if proxy:
+            response_context = build_opener(
+                ProxyHandler({"http": proxy, "https": proxy})
+            ).open(request, timeout=timeout)
+        else:
+            response_context = urlopen(request, timeout=timeout)
+        with response_context as response:
             return response.read()
     except HTTPError as error:
         status = error.code
@@ -129,6 +135,7 @@ def get_vk_chart(limit: int | None = None, *, timeout: float = 30) -> list[dict]
     remixsid = _validate_cookie(settings.get("VK_REMIXSID") or "", "VK_REMIXSID")
     remixnsid = _validate_cookie(settings.get("VK_REMIXNSID") or "", "VK_REMIXNSID")
     user_agent = (settings.get("VK_USER_AGENT") or "").strip()
+    proxy = (settings.get("VK_PROXY") or "").strip()
     if not user_agent or "\r" in user_agent or "\n" in user_agent:
         raise ValueError(f"Нет VK_USER_AGENT: {LOGIN_HINT}.")
     try:
@@ -146,7 +153,7 @@ def get_vk_chart(limit: int | None = None, *, timeout: float = 30) -> list[dict]
         "is_layer": 0,
         "owner_id": user_id,
         "section": "explore",
-    }, cookie, user_agent, timeout)
+    }, cookie, user_agent, timeout, proxy)
     first = _playlist(first_body)
     if first.get("hasMore") is not True or not first.get("nextOffset") or not first.get("blockId"):
         raise RuntimeError("VK Музыка: отсутствуют параметры загрузки продолжения чарта.")
@@ -155,5 +162,5 @@ def get_vk_chart(limit: int | None = None, *, timeout: float = 30) -> list[dict]
         "act": "load_catalog_section",
         "section_id": first["blockId"],
         "start_from": first["nextOffset"],
-    }, cookie, user_agent, timeout)
+    }, cookie, user_agent, timeout, proxy)
     return parse_chart_responses(first_body, remaining_body)[:limit]
