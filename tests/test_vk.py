@@ -1,6 +1,6 @@
 import json
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from urllib.error import HTTPError, URLError
 
 from parser.vk import get_vk_chart, parse_chart_responses
@@ -105,6 +105,31 @@ class VkTests(unittest.TestCase):
             opened.side_effect = error
             with self.assertRaises(RuntimeError):
                 get_vk_chart()
+
+    @patch("parser.vk.vk_parser._saved_session", return_value={})
+    @patch("parser.vk.vk_parser.build_opener")
+    @patch("parser.vk.vk_parser.urlopen")
+    @patch("parser.vk.vk_parser._settings")
+    def test_vk_proxy_is_used_for_both_requests(self, settings, direct_open, build_opener, _session):
+        settings.return_value = {
+            "VK_REMIXSID": "session-value",
+            "VK_REMIXNSID": "network-session-value",
+            "VK_USER_ID": "123",
+            "VK_USER_AGENT": "Mozilla/5.0 Test",
+            "VK_PROXY": "http://proxy.example:8080",
+        }
+        opener = MagicMock()
+        opener.open.return_value.__enter__.return_value.read.side_effect = [FIRST, REMAINING]
+        build_opener.return_value = opener
+
+        self.assertEqual(len(get_vk_chart(3)), 3)
+        self.assertEqual(opener.open.call_count, 2)
+        direct_open.assert_not_called()
+        handlers = [call.args[0] for call in build_opener.call_args_list]
+        self.assertTrue(all(handler.proxies == {
+            "http": "http://proxy.example:8080",
+            "https": "http://proxy.example:8080",
+        } for handler in handlers))
 
 
 if __name__ == "__main__":
