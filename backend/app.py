@@ -1,6 +1,7 @@
 """FastAPI application serving trends and accepting parser payloads."""
 
 import hmac
+from datetime import date
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
@@ -67,14 +68,26 @@ def health():
     return {"status": "ok"}
 
 
+def require_week(conn, week: date | None) -> None:
+    if week is not None and not repository.week_exists(conn, week):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Неделя не найдена.")
+
+
+@app.get("/api/v1/weeks")
+def get_weeks(conn: Db):
+    """Доступные недели, от новой к старой: для переключателя на сайте."""
+    return repository.weeks(conn)
+
+
 @app.get("/api/v1/categories")
 def get_categories(conn: Db):
     return repository.categories(conn)
 
 
 @app.get("/api/v1/feed")
-def get_feed(conn: Db):
-    return repository.feed(conn)
+def get_feed(conn: Db, week: date | None = Query(None)):
+    require_week(conn, week)
+    return repository.feed(conn, week)
 
 
 @app.get("/api/v1/trends")
@@ -82,8 +95,10 @@ def get_trends(
     conn: Db,
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    week: date | None = Query(None),
 ):
-    return repository.main_trends(conn, limit, offset)
+    require_week(conn, week)
+    return repository.main_trends(conn, limit, offset, week)
 
 
 @app.get("/api/v1/categories/{category}/trends")
@@ -94,10 +109,12 @@ def get_category_trends(
     genre: list[str] = Query(default=[]),
     limit: int = Query(100, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    week: date | None = Query(None),
 ):
     if category not in repository.CATEGORY_LABELS:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Категория не найдена.")
-    return repository.category_trends(conn, category, sort, genre, limit, offset)
+    require_week(conn, week)
+    return repository.category_trends(conn, category, sort, genre, limit, offset, week)
 
 
 @app.get("/api/v1/trends/category/{category}")
@@ -108,11 +125,13 @@ def get_category_trends_legacy(
     genre: list[str] = Query(default=[]),
     limit: int = Query(100, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    week: date | None = Query(None),
 ):
     """Контракт из архитектурной документации; основной URL — /categories/.../trends."""
     if category not in repository.CATEGORY_LABELS:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Категория не найдена.")
-    return repository.category_trends(conn, category, sort_by, genre, limit, offset)
+    require_week(conn, week)
+    return repository.category_trends(conn, category, sort_by, genre, limit, offset, week)
 
 
 @app.get("/api/v1/trends/{trend_id}")
