@@ -11,7 +11,7 @@ function CalendarIcon()
   );
 }
 
-export default function CategoryHero({ label, theme, period }) 
+export default function CategoryHero({ label, theme, period, weekControl }) 
 {
   return (
     <div className="cat-hero">
@@ -20,7 +20,8 @@ export default function CategoryHero({ label, theme, period })
       </div>
       <div className="cat-title-row">
         <h1 className="cat-title">{label}</h1>
-        {period && (
+        {weekControl}
+        {!weekControl && period && (
           <div className="period-pill">
             <CalendarIcon />
             {period}

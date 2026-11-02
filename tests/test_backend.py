@@ -40,6 +40,22 @@ class BackendMappingTests(unittest.TestCase):
         self.assertEqual(result["cover"], "https://avatars.yandex.net/cover.jpg")
         self.assertEqual(result["year"], 2026)
 
+class BackendWeekSourceTests(unittest.TestCase):
+    def test_latest_week_uses_existing_views(self):
+        from backend.repository import _feed_source, _top_source
+
+        self.assertEqual(_top_source(None), ("v_category_top_latest", []))
+        self.assertEqual(_feed_source(None), ("v_main_feed", []))
+
+    def test_chosen_week_filters_full_history_view(self):
+        from backend.repository import _feed_source, _top_source
+
+        sql, params = _top_source(date(2026, 10, 26))
+        self.assertIn("v_category_top", sql)
+        self.assertEqual(params, [date(2026, 10, 26)])
+        sql, params = _feed_source(date(2026, 10, 26))
+        self.assertIn("feed_rank", sql)
+        self.assertEqual(params, [date(2026, 10, 26)])
 
 class BackendRouteTests(unittest.TestCase):
     def test_expected_routes_are_registered(self):
@@ -48,6 +64,7 @@ class BackendRouteTests(unittest.TestCase):
         routes = {(route.path, method) for route in app.routes for method in route.methods or []}
         self.assertIn(("/api/v1/health", "GET"), routes)
         self.assertIn(("/api/v1/feed", "GET"), routes)
+        self.assertIn(("/api/v1/weeks", "GET"), routes)
         self.assertIn(("/api/v1/categories", "GET"), routes)
         self.assertIn(("/api/v1/categories/{category}/trends", "GET"), routes)
         self.assertIn(("/api/v1/trends/{trend_id}", "GET"), routes)

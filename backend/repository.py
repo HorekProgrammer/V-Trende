@@ -28,6 +28,43 @@ def _row(cursor) -> dict | None:
     return dict(zip(columns, value)) if value is not None else None
 
 
+def weeks(conn) -> list[str]:
+    """Недели, за которые опубликован рейтинг, от новой к старой."""
+    rows = conn.execute(
+        "SELECT DISTINCT week_start FROM mv_category_rank ORDER BY week_start DESC"
+    ).fetchall()
+    return [row[0].isoformat() for row in rows]
+
+
+def week_exists(conn, week) -> bool:
+    return conn.execute(
+        "SELECT 1 FROM mv_category_rank WHERE week_start = %s LIMIT 1", (week,)
+    ).fetchone() is not None
+
+
+def _top_source(week) -> tuple[str, list]:
+    """Откуда брать топ категорий: последняя неделя или выбранная."""
+    if week is None:
+        return "v_category_top_latest", []
+    return "(SELECT * FROM v_category_top WHERE week_start = %s) AS top_week", [week]
+
+
+def _feed_source(week) -> tuple[str, list]:
+    """Главная лента: для выбранной недели порядок считается так же, как в v_main_feed."""
+    if week is None:
+        return "v_main_feed", []
+    return (
+        """(SELECT t.*,
+                   (row_number() OVER (
+                       ORDER BY t.score DESC, t.search_count DESC NULLS LAST,
+                                t.rank, t.category, t.trend_id
+                   ))::integer AS feed_rank
+            FROM v_category_top t
+            WHERE t.week_start = %s) AS feed_week""",
+        [week],
+    )
+
+
 def card(record: dict) -> dict:
     return {
         "key": str(record["trend_id"]),
@@ -64,30 +101,42 @@ def categories(conn) -> list[dict]:
     ]
 
 
-def feed(conn) -> dict:
+def feed(conn, week=None) -> dict:
+    top_source, top_params = _top_source(week)
+    feed_source, feed_params = _feed_source(week)
     global_items = _rows(conn.execute(
-        f"SELECT {CARD_COLUMNS} FROM v_main_feed ORDER BY feed_rank LIMIT 10"
+        f"SELECT {CARD_COLUMNS} FROM {feed_source} ORDER BY feed_rank LIMIT 10",
+        feed_params,
     ))
     new_items = _rows(conn.execute(
-        f"""SELECT {CARD_COLUMNS} FROM v_category_top_latest
+        f"""SELECT {CARD_COLUMNS} FROM {top_source}
             WHERE is_new
             ORDER BY search_count DESC NULLS LAST, rank
-            LIMIT 8"""
+            LIMIT 8""",
+        top_params,
     ))
     legendary = _rows(conn.execute(
-        f"""SELECT {CARD_COLUMNS} FROM v_category_top_latest
+        f"""SELECT {CARD_COLUMNS} FROM {top_source}
             ORDER BY weeks_in_top DESC, rank
-            LIMIT 8"""
+            LIMIT 8""",
+        top_params,
     ))
     top = _rows(conn.execute(
-        f"""SELECT {CARD_COLUMNS} FROM v_category_top_latest
+        f"""SELECT {CARD_COLUMNS} FROM {top_source}
             WHERE rank <= 3
-            ORDER BY category, rank"""
+            ORDER BY category, rank""",
+        top_params,
     ))
     grouped = defaultdict(list)
     for row in top:
         grouped[row["category"]].append(card(row))
+    chosen_week = None
+    for rows in (global_items, top, new_items, legendary):
+        if rows:
+            chosen_week = rows[0]["week_start"].isoformat()
+            break
     return {
+        "weekStart": chosen_week,
         "global": [card(row) for row in global_items],
         "new": [card(row) for row in new_items],
         "legendary": [card(row) for row in legendary],
@@ -101,11 +150,12 @@ def feed(conn) -> dict:
     }
 
 
-def main_trends(conn, limit: int, offset: int) -> dict:
+def main_trends(conn, limit: int, offset: int, week=None) -> dict:
+    feed_source, feed_params = _feed_source(week)
     rows = _rows(conn.execute(
-        f"""SELECT {CARD_COLUMNS} FROM v_main_feed
+        f"""SELECT {CARD_COLUMNS} FROM {feed_source}
             ORDER BY feed_rank LIMIT %s OFFSET %s""",
-        (limit, offset),
+        [*feed_params, limit, offset],
     ))
     return {"items": [card(row) for row in rows], "limit": limit, "offset": offset}
 
@@ -117,26 +167,28 @@ def category_trends(
     genres: list[str],
     limit: int = 100,
     offset: int = 0,
+    week=None,
 ) -> dict:
     order = {
         "popular": "rank",
         "new": "first_seen_week DESC, rank",
         "rising": "rank_change DESC NULLS LAST, rank",
     }[sort]
-    params: list[object] = [category]
+    top_source, top_params = _top_source(week)
+    params: list[object] = [*top_params, category]
     genre_filter = ""
     if genres:
         genre_filter = " AND genre = ANY(%s)"
         params.append(genres)
     rows = _rows(conn.execute(
-        f"""SELECT {CARD_COLUMNS} FROM v_category_top_latest
+        f"""SELECT {CARD_COLUMNS} FROM {top_source}
             WHERE category = %s{genre_filter}
             ORDER BY {order} LIMIT %s OFFSET %s""",
         [*params, limit, offset],
     ))
-    week = rows[0]["week_start"].isoformat() if rows else None
+    chosen_week = rows[0]["week_start"].isoformat() if rows else (str(week) if week else None)
     return {
-        "weekStart": week,
+        "weekStart": chosen_week,
         "items": [card(row) for row in rows],
         "limit": limit,
         "offset": offset,

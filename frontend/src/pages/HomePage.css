@@ -62,3 +62,8 @@ html
     overflow-wrap: anywhere;
   }
 }
+
+.hero-week 
+{
+  margin-top: 22px;
+}

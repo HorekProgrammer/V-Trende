@@ -4,10 +4,12 @@ import TrendCard from '../components/trends/TrendCard';
 import CategoryHero from '../components/category/CategoryHero';
 import FiltersPanel from '../components/category/FiltersPanel';
 import DataState from '../components/common/DataState';
+import WeekSwitcher from '../components/common/WeekSwitcher';
 import { CATEGORY_THEMES, themeWash } from '../components/category/categoryThemes';
 import { CATEGORIES } from '../components/category/categories';
 import { useApi } from '../api/useApi';
-import { categoryTrendsPath } from '../api/paths';
+import { categoryTrendsPath, weeksPath } from '../api/paths';
+import { useWeek } from '../api/useWeek';
 import { formatWeek } from '../utils/dates';
 import './CategoryPage.css';
 
@@ -18,7 +20,9 @@ function CategoryView({ category }) {
   const [sort, setSort] = useState('popular');
   const [selectedGenres, setSelectedGenres] = useState([]);
 
-  const { data, loading, error } = useApi(categoryTrendsPath(category.id, sort));
+  const [week, setWeek] = useWeek();
+  const { data: weeks } = useApi(weeksPath());
+  const { data, loading, error } = useApi(categoryTrendsPath(category.id, sort, week));
 
   const allItems = useMemo(() => (data ? data.items : []), [data]);
 
@@ -40,11 +44,12 @@ function CategoryView({ category }) {
     );
 
   const period = data?.weekStart ? `Неделя: ${formatWeek(data.weekStart)}` : '';
+  const weekControl = weeks ? <WeekSwitcher weeks={weeks} value={week} onChange={setWeek} /> : null;
 
   return (
     <div className="category-page" style={{ background: themeWash(theme) }}>
       <div className="category-content">
-        <CategoryHero label={category.label} theme={theme} period={period} />
+        <CategoryHero label={category.label} theme={theme} period={period} weekControl={weekControl} />
 
         <div className="cat-body">
           <FiltersPanel
@@ -69,7 +74,7 @@ function CategoryView({ category }) {
                 <TrendCard
                   key={item.key}
                   item={item}
-                  onClick={() => navigate(`/trend/${item.key}`)}
+                  onClick={() => navigate(`/trend/${item.key}${week ? `?week=${week}` : ''}`)}
                 />
               ))}
             </DataState>
@@ -80,7 +85,8 @@ function CategoryView({ category }) {
   );
 }
 
-export default function CategoryPage() {
+export default function CategoryPage() 
+{
   const { name } = useParams();
   const category = CATEGORIES.find((c) => c.id === name);
 
