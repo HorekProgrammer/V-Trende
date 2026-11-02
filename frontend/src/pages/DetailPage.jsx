@@ -60,7 +60,7 @@ export default function DetailPage()
           <>
             <DetailHero item={item} category={category} />
             <StatGrid item={item} />
-            <PopularityCard key={item.key} history={item.history} topSize={category.topSize} />
+            <PopularityCard key={item.key} history={item.history} />
           </>
         )}
       </DataState>
