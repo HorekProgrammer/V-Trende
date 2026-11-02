@@ -100,15 +100,6 @@ def _cover_url(entry: dict) -> str | None:
     return url
 
 
-def _year(entry: dict) -> int | None:
-    year = entry.get("year")
-    if year is None:
-        return None
-    if type(year) is not int or not 1900 <= year <= 2100:
-        raise PayloadError(f"Поле 'year' должно быть годом от 1900 до 2100: {year!r}.")
-    return year
-
-
 def _chart_entry(entry: dict, source: str) -> dict:
     position = entry.get("position")
     if type(position) is not int or not 1 <= position <= MAX_POSITION:
@@ -121,7 +112,6 @@ def _chart_entry(entry: dict, source: str) -> dict:
         "external_id": _text(entry, "external_id", required=False, max_length=200),
         "url": _text(entry, "url", required=False, max_length=2000),
         "cover_url": _cover_url(entry),
-        "year": _year(entry),
         "match_key": _text(entry, "match_key"),
     }
     if source == "twitch":
@@ -202,12 +192,6 @@ def _resolve_trend(conn, source: str, category: str, entry: dict) -> int:
             ON CONFLICT DO NOTHING
             """,
             (trend_id, source, entry["external_id"], entry["url"]),
-        )
-
-    if entry["year"] is not None:
-        conn.execute(
-            "UPDATE trends SET year = %s WHERE id = %s AND year IS NULL",
-            (entry["year"], trend_id),
         )
 
     if entry["cover_url"] is not None:
