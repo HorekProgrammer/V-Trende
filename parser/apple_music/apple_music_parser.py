@@ -6,8 +6,6 @@ from urllib.request import Request, urlopen
 
 from parser.common.covers import apple_artwork_url
 
-from .itunes_years import fill_years
-
 CHART_URL = "https://music.apple.com/us/playlist/top-100-russia/pl.728bd30a9247487c80a483f4168a9dcd"
 CHART_SIZE = 100
 
@@ -29,13 +27,6 @@ class _ServerDataParser(HTMLParser):
     def handle_endtag(self, tag):
         if tag == "script":
             self.inside = False
-
-
-def _apple_id(item: dict) -> str | None:
-    descriptor = item.get("contentDescriptor")
-    identifiers = descriptor.get("identifiers") if isinstance(descriptor, dict) else None
-    value = identifiers.get("storeAdamID") if isinstance(identifiers, dict) else None
-    return str(value) if isinstance(value, (str, int)) and str(value).isdigit() else None
 
 
 def parse_chart_html(html: str) -> list[dict]:
@@ -64,9 +55,7 @@ def parse_chart_html(html: str) -> list[dict]:
                     or any(not isinstance(artist, str) or not artist.strip() for artist in artists)):
                 raise ValueError
             result.append({"position": position, "title": title, "artists": artists,
-                           "cover_url": apple_artwork_url(item.get("artwork")),
-                           "apple_id": _apple_id(item),
-                           "year": None})
+                           "cover_url": apple_artwork_url(item.get("artwork"))})
         return result
     except (json.JSONDecodeError, KeyError, IndexError, TypeError, ValueError):
         raise RuntimeError(
@@ -96,6 +85,4 @@ def get_apple_music_chart(limit: int | None = None, *, timeout: float = 30) -> l
         raise RuntimeError("Apple Music: ошибка сети или таймаут.") from None
     except UnicodeError:
         raise RuntimeError("Apple Music: некорректная кодировка страницы.") from None
-    tracks = parse_chart_html(html)[:limit]
-    fill_years(tracks, timeout=timeout)
-    return tracks
+    return parse_chart_html(html)[:limit]

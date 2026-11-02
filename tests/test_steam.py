@@ -81,11 +81,7 @@ class SteamParserTests(unittest.TestCase):
                 "steam_app_id": 100001,
                 "rank_last_week": 4,
                 "consecutive_weeks": 1,
-                "cover_url": (
-                    "https://shared.akamai.steamstatic.com/store_item_assets/"
-                    "steam/apps/100001/header.jpg"
-                ),
-                "year": None,
+                "cover_url": None,
             },
         )
 
@@ -156,12 +152,15 @@ class SteamParserTests(unittest.TestCase):
         )
 
     @patch(
+        "parser.steam.steam_parser.fill_missing_covers"
+    )
+    @patch(
         "parser.steam.steam_parser._fetch_weekly_chart_payload"
     )
     @patch(
         "parser.steam.steam_parser._fetch_text"
     )
-    def test_fetch_chart_uses_latest_week(self, fetch_text, fetch_payload):
+    def test_fetch_chart_uses_latest_week(self, fetch_text, fetch_payload, fill_covers):
         fetch_text.return_value = """
         <a href="/charts/topsellers/DE/2026-9-29"></a>
         """
@@ -174,6 +173,7 @@ class SteamParserTests(unittest.TestCase):
         )
 
         self.assertEqual(len(chart), 10)
+        self.assertEqual(len(fill_covers.call_args.args[0]), 10)
 
         fetch_payload.assert_called_once_with(
             1790640000,

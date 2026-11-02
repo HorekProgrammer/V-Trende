@@ -87,11 +87,7 @@ class SteamPlayersTests(unittest.TestCase):
                     "FPS",
                     "Shooter",
                 ],
-                "cover_url": (
-                    "https://shared.akamai.steamstatic.com/store_item_assets/"
-                    "steam/apps/100001/header.jpg"
-                ),
-                "year": None,
+                "cover_url": None,
             },
         )
 
@@ -302,6 +298,10 @@ class SteamPlayersTests(unittest.TestCase):
 
     @patch(
         "parser.steam_players."
+        "steam_players_parser.fill_missing_covers"
+    )
+    @patch(
+        "parser.steam_players."
         "steam_players_parser._fetch_tag_names"
     )
     @patch(
@@ -312,6 +312,7 @@ class SteamPlayersTests(unittest.TestCase):
         self,
         fetch_payload,
         fetch_tag_names,
+        fill_covers,
     ):
         fetch_payload.return_value = (
             _make_payload()

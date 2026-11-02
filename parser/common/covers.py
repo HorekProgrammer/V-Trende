@@ -39,7 +39,7 @@ def largest_from_srcset(srcset) -> str | None:
     return best_url
 
 
-def steam_cover_url(app_id: int, assets=None) -> str | None:
+def steam_assets_cover_url(assets) -> str | None:
     if isinstance(assets, dict):
         template = assets.get("asset_url_format")
         if isinstance(template, str) and "${FILENAME}" in template:
@@ -51,9 +51,17 @@ def steam_cover_url(app_id: int, assets=None) -> str | None:
                     )
                     if url:
                         return url
+    return None
+
+
+def steam_fallback_cover_url(app_id) -> str | None:
     if type(app_id) is not int or app_id <= 0:
         return None
     return f"{STEAM_ASSETS_BASE}steam/apps/{app_id}/{STEAM_FALLBACK_FILE}"
+
+
+def steam_cover_url(app_id: int, assets=None) -> str | None:
+    return steam_assets_cover_url(assets) or steam_fallback_cover_url(app_id)
 
 
 EPIC_IMAGE_PREFERENCE = (
