@@ -66,6 +66,13 @@ def run_whatstat(week: date | None = None) -> int:
     return whatstat_batch.main(args)
 
 
+def run_music_genres(week: date) -> int:
+    from parser.music_genres import fill_music_genres
+    saved, unknown = fill_music_genres(week)
+    print(f"Жанры музыки: сохранено {saved}, неизвестно {unknown}.", file=sys.stderr)
+    return 0
+
+
 def run_chart(key: str, save: bool, week: date | None = None) -> tuple[bool, str]:
     chart = CHARTS[key]
     try:
@@ -139,6 +146,7 @@ def main(argv: list[str] | None = None) -> int:
 
     whatstat_failed = False
     wordstat_failed = False
+    genres_failed = False
     if args.save and not args.skip_wordstat:
         print("\n[whatstat] запуск…", file=sys.stderr, flush=True)
         whatstat_failed = run_whatstat(target_week) != 0
@@ -148,7 +156,17 @@ def main(argv: list[str] | None = None) -> int:
             wordstat_failed = run_wordstat(target_week, publish=not args.defer_publish) != 0
             print(f"[wordstat] {'ОШИБКА' if wordstat_failed else 'OK'}", file=sys.stderr, flush=True)
 
-    return 1 if failed or whatstat_failed or wordstat_failed else 0
+        if not wordstat_failed:
+            print("\n[music_genres] запуск…", file=sys.stderr, flush=True)
+            try:
+                run_music_genres(target_week)
+            except Exception as error:  # noqa: BLE001 — ошибка обогащения должна попасть в итог планировщика
+                genres_failed = True
+                print(f"[music_genres] ОШИБКА: {error}", file=sys.stderr, flush=True)
+            else:
+                print("[music_genres] OK", file=sys.stderr, flush=True)
+
+    return 1 if failed or whatstat_failed or wordstat_failed or genres_failed else 0
 
 
 if __name__ == "__main__":

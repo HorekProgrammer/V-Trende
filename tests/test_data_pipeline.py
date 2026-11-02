@@ -162,6 +162,13 @@ class TwitchAdapterTests(unittest.TestCase):
 
 
 class RunAllFailureTests(unittest.TestCase):
+    def setUp(self):
+        self.music_genres_patcher = patch("parser.run_all.run_music_genres", return_value=0)
+        self.music_genres_patcher.start()
+
+    def tearDown(self):
+        self.music_genres_patcher.stop()
+
     def test_failed_chart_is_recorded_with_save(self):
         bad = MagicMock(side_effect=RuntimeError("сайт недоступен"))
         chart = CHARTS["vk"].__class__(**{**CHARTS["vk"].__dict__, "fetch": bad})
@@ -204,6 +211,7 @@ class RunAllFailureTests(unittest.TestCase):
                 patch("parser.run_all.missing_chart_keys", return_value=([], [])) as missing, \
                 patch("parser.run_all.run_whatstat", return_value=0) as whatstat, \
                 patch("parser.run_all.run_wordstat", return_value=0) as wordstat, \
+                patch("parser.run_all.run_music_genres", return_value=0) as music_genres, \
                 redirect_stderr(io.StringIO()):
             self.assertEqual(
                 run_all.main(["--save", "--next-week", "--defer-publish"]),
@@ -214,6 +222,7 @@ class RunAllFailureTests(unittest.TestCase):
         missing.assert_called_once_with([], target)
         whatstat.assert_called_once_with(target)
         wordstat.assert_called_once_with(target, publish=False)
+        music_genres.assert_called_once_with(target)
 
     def test_whatstat_failure_prevents_publication(self):
         with patch.dict(run_all.CHARTS, {}, clear=True), \
