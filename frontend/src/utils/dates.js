@@ -17,3 +17,10 @@ export function formatWeek(iso)
   }
   return `${start.getDate()} ${MONTHS[start.getMonth()]} – ${end.getDate()} ${MONTHS[end.getMonth()]}`;
 }
+
+export function formatDate(iso) 
+{
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y.slice(2)}`;
+}

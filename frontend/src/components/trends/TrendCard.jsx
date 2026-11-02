@@ -1,9 +1,10 @@
 import './TrendCard.css';
-import { fmtSearches, subtitleWithYear } from '../../utils/trendFormat';
+import { subtitleWithYear } from '../../utils/trendFormat';
 import Cover from '../common/Cover';
 
 
-function TrendBadge({ prevRank, rank, isNew }) {
+function TrendBadge({ prevRank, rank, isNew }) 
+{
   if (isNew) return <span className="trend-badge trend-new">NEW</span>;
   if (prevRank == null) return <span className="trend-badge trend-flat">—</span>;
   const delta = prevRank - rank;
@@ -12,7 +13,18 @@ function TrendBadge({ prevRank, rank, isNew }) {
   return <span className="trend-badge trend-flat">— 0</span>;
 }
 
-export default function TrendCard({ item, onClick }) {
+function Stat({ label, value }) 
+{
+  return (
+    <div className="row-stat">
+      <div className="row-stat-value">{value}</div>
+      <div className="row-stat-label">{label}</div>
+    </div>
+  );
+}
+
+export default function TrendCard({ item, onClick }) 
+{
   return (
     <div className="row-card" onClick={onClick}>
       <div className="row-rank">{item.rank}</div>
@@ -21,11 +33,13 @@ export default function TrendCard({ item, onClick }) {
         <div className="row-title">{item.title}</div>
         <div className="row-sub">{subtitleWithYear(item)}</div>
       </div>
-      <div className="row-views">
-        {item.score == null ? fmtSearches(item.searchCount) : `${item.score.toFixed(1)} балла`}
+      <div className="row-stats">
+        <Stat label="Прошлая" value={item.prevRank == null ? '—' : `#${item.prevRank}`} />
+        <Stat label="Пик" value={`#${item.peak}`} />
+        <Stat label="Недель" value={item.weeks} />
       </div>
       <div className="row-trend">
-           <TrendBadge prevRank={item.prevRank} rank={item.rank} isNew={item.isNew} />
+        <TrendBadge prevRank={item.prevRank} rank={item.rank} isNew={item.isNew} />
       </div>
       <div className="row-arrow">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
