@@ -38,7 +38,6 @@ class KionTests(unittest.TestCase):
             "title": "Трек 1",
             "artists": ["Первый", "Второй"],
             "cover_url": "https://avatars.yandex.net/get-music-content/1/1/400x400",
-            "year": 2026,
         })
         self.assertEqual(result[-1]["position"], 100)
 

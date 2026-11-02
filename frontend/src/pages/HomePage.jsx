@@ -5,10 +5,8 @@ import Top3Block from '../components/trends/Top3Block';
 import CrownIcon from '../components/icons/CrownIcon';
 import HomeSidebar from '../components/common/HomeSidebar';
 import DataState from '../components/common/DataState';
-import WeekSwitcher from '../components/common/WeekSwitcher';
 import { useApi } from '../api/useApi';
-import { feedPath, weeksPath } from '../api/paths';
-import { useWeek } from '../api/useWeek';
+import { feedPath } from '../api/paths';
 import './HomePage.css';
 
 const SECTIONS = 
@@ -23,10 +21,8 @@ export default function HomePage()
 {
   const navigate = useNavigate();
   const [activeId, setActiveId] = useState(SECTIONS[0].id);
-  const [week, setWeek] = useWeek();
-  const { data: weeks } = useApi(weeksPath());
-  const { data, loading, error } = useApi(feedPath(week));
-  const openTrend = (item) => navigate(`/trend/${item.key}${week ? `?week=${week}` : ''}`);
+  const { data, loading, error } = useApi(feedPath());
+  const openTrend = (item) => navigate(`/trend/${item.key}`);
 
   return (
     <div className="home-layout">
@@ -35,11 +31,6 @@ export default function HomePage()
       <main className="home">
         <section className="hero">
           <h1>Всё, что сейчас обсуждают — в одной ленте</h1>
-          {weeks && (
-            <div className="hero-week">
-              <WeekSwitcher weeks={weeks} value={week} onChange={setWeek} />
-            </div>
-          )}
         </section>
 
         <DataState loading={loading} error={error}>

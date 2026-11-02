@@ -31,7 +31,7 @@ export default function TrendCard({ item, onClick })
       <Cover item={item} className="row-cover" />
       <div className="row-info">
         <div className="row-title">{item.title}</div>
-        <div className="row-sub">{subtitleWithYear(item)}</div>
+        <div className="row-sub">{item.subtitle}</div>
       </div>
       <div className="row-stats">
         <Stat label="Прошлая" value={item.prevRank == null ? '—' : `#${item.prevRank}`} />

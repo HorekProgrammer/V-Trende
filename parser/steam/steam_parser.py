@@ -6,8 +6,8 @@ from urllib.error import URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from parser.common.covers import steam_cover_url
-from parser.common.years import steam_release_year
+from parser.common.covers import steam_assets_cover_url
+from parser.common.steam_details import fill_missing_covers
 
 
 CHARTS_OVERVIEW_URL = "https://store.steampowered.com/charts/"
@@ -288,8 +288,7 @@ def _parse_chart(payload, timeout):
                 "steam_app_id": app_id,
                 "rank_last_week": last_week_rank,
                 "consecutive_weeks": consecutive_weeks,
-                "cover_url": steam_cover_url(app_id, assets),
-                "year": steam_release_year(item),
+                "cover_url": steam_assets_cover_url(assets),
             }
         )
 
@@ -339,9 +338,11 @@ def _fetch_chart(limit, timeout):
     chart = _parse_chart(
         payload,
         timeout,
-    )
+    )[:target_size]
 
-    return chart[:target_size]
+    fill_missing_covers(chart, timeout=timeout)
+
+    return chart
 
 
 def get_steam_chart(limit=None, timeout=30):

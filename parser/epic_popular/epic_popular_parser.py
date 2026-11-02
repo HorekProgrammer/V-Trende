@@ -3,7 +3,6 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from parser.common.covers import epic_cover_url
-from parser.common.years import iso_release_year
 
 
 GRAPHQL_URL = "https://store.epicgames.com/graphql"
@@ -33,9 +32,6 @@ _IMAGES_FIELDS = """
           type
           url
         }"""
-_RELEASE_FIELDS = """
-        releaseDate"""
-QUERY_WITH_DETAILS = _QUERY_TEMPLATE % (_IMAGES_FIELDS + _RELEASE_FIELDS)
 QUERY_WITH_IMAGES = _QUERY_TEMPLATE % _IMAGES_FIELDS
 QUERY = _QUERY_TEMPLATE % ""
 
@@ -52,13 +48,12 @@ def _has_offers(payload):
 
 
 def _fetch_payload(timeout):
-    for query in (QUERY_WITH_DETAILS, QUERY_WITH_IMAGES):
-        try:
-            payload = _request(query, timeout)
-        except RuntimeError:
-            continue
-        if _has_offers(payload):
-            return payload
+    try:
+        payload = _request(QUERY_WITH_IMAGES, timeout)
+    except RuntimeError:
+        payload = None
+    if _has_offers(payload):
+        return payload
     return _request(QUERY, timeout)
 
 
@@ -162,7 +157,6 @@ def _parse_chart(payload):
                 "epic_namespace": namespace,
                 "epic_slug": _extract_slug(offer),
                 "cover_url": epic_cover_url(offer.get("keyImages")),
-                "year": iso_release_year(offer.get("releaseDate")),
             }
         )
 

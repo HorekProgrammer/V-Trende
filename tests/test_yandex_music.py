@@ -31,9 +31,8 @@ class MusicTests(unittest.TestCase):
         self.assertEqual(len(tracks), 2)
         self.assertEqual(tracks[0], {"title": "Песня <3 & музыка",
                          "artists": ["Артист A", "Артист B"], "position": 1,
-                         "cover_url": "https://avatars.yandex.net/get-music-content/9/1/400x400",
-                         "year": 2025})
-        self.assertTrue(all(set(t) == {"title", "artists", "position", "cover_url", "year"} for t in tracks))
+                         "cover_url": "https://avatars.yandex.net/get-music-content/9/1/400x400"})
+        self.assertTrue(all(set(t) == {"title", "artists", "position", "cover_url"} for t in tracks))
 
     def test_removed_fields_are_not_required(self):
         operations = data()
