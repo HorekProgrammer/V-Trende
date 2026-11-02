@@ -16,9 +16,22 @@
 
 .stat-num 
 {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: 10px;
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 22px;
+}
+
+.stat-note 
+{
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-dim);
+  white-space: nowrap;
 }
 
 .stat-label 
@@ -30,7 +43,13 @@
 
 @media (max-width: 900px) 
 {
-  .stat-grid {
+  .stat-grid 
+  {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stat-num 
+  {
+    font-size: 18px;
   }
 }
