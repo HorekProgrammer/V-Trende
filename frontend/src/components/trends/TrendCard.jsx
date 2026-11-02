@@ -1,5 +1,4 @@
 import './TrendCard.css';
-import { subtitleWithYear } from '../../utils/trendFormat';
 import Cover from '../common/Cover';
 
 
