@@ -1,8 +1,10 @@
-import { W, H, PAD_L, PAD_R, PAD_T, INNER_H, chartCoords, rankY, axisRanks } from './chartMath';
+import { W, H, PAD_L, PAD_R, PAD_T, INNER_H, chartBottom, chartCoords, rankY, axisRanks } from './chartMath';
 
-export default function PopularityChart({ points, topSize }) 
+export default function PopularityChart({ points }) 
 {
-  const coords = chartCoords(points.map((p) => p.value), topSize);
+  const values = points.map((p) => p.value);
+  const bottom = chartBottom(values);
+  const coords = chartCoords(values, bottom);
 
   const linePath = coords
     .map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`)
@@ -13,13 +15,13 @@ export default function PopularityChart({ points, topSize })
   const last = coords[coords.length - 1];
   const areaPath = `${linePath} L${last[0].toFixed(1)},${baseY} L${first[0].toFixed(1)},${baseY} Z`;
 
-  const ranks = axisRanks(topSize);
+  const ranks = axisRanks(bottom);
 
   return (
     <div className="chart-plot">
       <div className="chart-axis">
         {ranks.map((r) => (
-          <span key={r} style={{ top: rankY(r, topSize) }}>
+          <span key={r} style={{ top: rankY(r, bottom) }}>
             #{r}
           </span>
         ))}
@@ -38,7 +40,7 @@ export default function PopularityChart({ points, topSize })
         </defs>
 
         {ranks.map((r) => {
-          const y = rankY(r, topSize);
+          const y = rankY(r, bottom);
           return (
             <line key={r} x1={PAD_L} y1={y} x2={W - PAD_R} y2={y} stroke="#2A2534" strokeWidth="1" />
           );

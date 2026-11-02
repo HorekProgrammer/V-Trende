@@ -5,7 +5,7 @@ import { PERIODS } from './periods';
 import { formatWeek } from '../../utils/dates';
 import './PopularityCard.css';
 
-export default function PopularityCard({ history, topSize }) 
+export default function PopularityCard({ history }) 
 {
   const [periodId, setPeriodId] = useState('12w');
   const period = PERIODS.find((p) => p.id === periodId);
@@ -30,7 +30,7 @@ export default function PopularityCard({ history, topSize })
         <div className="chart-empty">Пока нет данных для графика</div>
       ) : (
         <>
-          <PopularityChart points={points} topSize={topSize} />
+          <PopularityChart points={points} />
           {points.length > 1 && (
             <div className="chart-foot">
               <span>{formatWeek(points[0].weekStart)}</span>
