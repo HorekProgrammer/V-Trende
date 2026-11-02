@@ -73,6 +73,13 @@ def run_music_genres(week: date) -> int:
     return 0
 
 
+def run_game_genres(week: date) -> int:
+    from parser.game_genres import fill_game_genres
+    saved, unknown = fill_game_genres(week)
+    print(f"Жанры игр: сохранено {saved}, неизвестно {unknown}.", file=sys.stderr)
+    return 0
+
+
 def run_chart(key: str, save: bool, week: date | None = None) -> tuple[bool, str]:
     chart = CHARTS[key]
     try:
@@ -165,6 +172,15 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"[music_genres] ОШИБКА: {error}", file=sys.stderr, flush=True)
             else:
                 print("[music_genres] OK", file=sys.stderr, flush=True)
+
+            print("\n[game_genres] запуск…", file=sys.stderr, flush=True)
+            try:
+                run_game_genres(target_week)
+            except Exception as error:  # noqa: BLE001 — ошибка обогащения должна попасть в итог планировщика
+                genres_failed = True
+                print(f"[game_genres] ОШИБКА: {error}", file=sys.stderr, flush=True)
+            else:
+                print("[game_genres] OK", file=sys.stderr, flush=True)
 
     return 1 if failed or whatstat_failed or wordstat_failed or genres_failed else 0
 

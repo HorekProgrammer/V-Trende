@@ -29,7 +29,7 @@ class MigrationFilesTests(unittest.TestCase):
         migrations = discover()
         self.assertEqual(
             [m.version for m in migrations],
-            ["001", "002", "003", "004", "005", "006", "007", "008", "009", "010"],
+            ["001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "011"],
         )
         self.assertTrue(all(m.sql.strip() for m in migrations))
 
@@ -165,8 +165,11 @@ class RunAllFailureTests(unittest.TestCase):
     def setUp(self):
         self.music_genres_patcher = patch("parser.run_all.run_music_genres", return_value=0)
         self.music_genres_patcher.start()
+        self.game_genres_patcher = patch("parser.run_all.run_game_genres", return_value=0)
+        self.game_genres_patcher.start()
 
     def tearDown(self):
+        self.game_genres_patcher.stop()
         self.music_genres_patcher.stop()
 
     def test_failed_chart_is_recorded_with_save(self):
@@ -212,6 +215,7 @@ class RunAllFailureTests(unittest.TestCase):
                 patch("parser.run_all.run_whatstat", return_value=0) as whatstat, \
                 patch("parser.run_all.run_wordstat", return_value=0) as wordstat, \
                 patch("parser.run_all.run_music_genres", return_value=0) as music_genres, \
+                patch("parser.run_all.run_game_genres", return_value=0) as game_genres, \
                 redirect_stderr(io.StringIO()):
             self.assertEqual(
                 run_all.main(["--save", "--next-week", "--defer-publish"]),
@@ -223,6 +227,7 @@ class RunAllFailureTests(unittest.TestCase):
         whatstat.assert_called_once_with(target)
         wordstat.assert_called_once_with(target, publish=False)
         music_genres.assert_called_once_with(target)
+        game_genres.assert_called_once_with(target)
 
     def test_whatstat_failure_prevents_publication(self):
         with patch.dict(run_all.CHARTS, {}, clear=True), \
