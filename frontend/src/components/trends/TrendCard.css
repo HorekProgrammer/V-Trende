@@ -211,3 +211,36 @@
     display: none;
   }
 }
+
+.row-card.rank-1 
+{
+  --medal: #F2B84B;
+  --medal-glow: rgba(242, 184, 75, .28);
+}
+
+.row-card.rank-2 
+{
+  --medal: #C9D1DB;
+  --medal-glow: rgba(201, 209, 219, .22);
+}
+
+.row-card.rank-3 
+{
+  --medal: #CD7F32;
+  --medal-glow: rgba(205, 127, 50, .26);
+}
+
+.row-card.rank-1,
+.row-card.rank-2,
+.row-card.rank-3 
+{
+  border-color: var(--medal);
+  box-shadow: 0 0 0 1px var(--medal), 0 0 18px var(--medal-glow);
+}
+
+.row-card.rank-1 .row-rank,
+.row-card.rank-2 .row-rank,
+.row-card.rank-3 .row-rank 
+{
+  color: var(--medal);
+}
