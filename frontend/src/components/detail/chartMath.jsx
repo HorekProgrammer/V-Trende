@@ -7,31 +7,39 @@ export const PAD_B = 26;
 export const INNER_W = W - PAD_L - PAD_R;
 export const INNER_H = H - PAD_T - PAD_B;
 
-export function chartBottom(values) 
+export function chartTop(values) 
 {
-  return Math.max(2, ...values);
+  return Math.min(...values);
 }
 
-export function rankY(rank, bottom) 
+export function chartBottom(values, top) 
 {
-  if (!(bottom > 1)) return PAD_T;
-  const clamped = Math.min(Math.max(rank, 1), bottom);
-  return PAD_T + ((clamped - 1) / (bottom - 1)) * INNER_H;
+  return Math.max(top + 1, ...values);
 }
 
-export function chartCoords(values, bottom) 
+export function rankY(rank, top, bottom) 
+{
+  if (!(bottom > top)) return PAD_T;
+  const clamped = Math.min(Math.max(rank, top), bottom);
+  return PAD_T + ((clamped - top) / (bottom - top)) * INNER_H;
+}
+
+export function chartCoords(values, top, bottom) 
 {
   return values.map((rank, i) => {
     const x =
       values.length === 1
         ? PAD_L + INNER_W / 2
         : PAD_L + (i / (values.length - 1)) * INNER_W;
-    return [x, rankY(rank, bottom)];
+    return [x, rankY(rank, top, bottom)];
   });
 }
 
-export function axisRanks(bottom) 
+export function axisRanks(top, bottom) 
 {
-  if (bottom <= 5) return Array.from({ length: bottom }, (_, i) => i + 1);
-  return [...new Set([1, Math.round(bottom / 2), bottom])];
+  if (bottom - top < 5) 
+  {
+    return Array.from({ length: bottom - top + 1 }, (_, i) => top + i);
+  }
+  return [...new Set([top, Math.round((top + bottom) / 2), bottom])];
 }
