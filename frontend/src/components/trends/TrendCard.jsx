@@ -24,8 +24,10 @@ function Stat({ label, value })
 
 export default function TrendCard({ item, onClick }) 
 {
+    const medal = item.rank >= 1 && item.rank <= 3 ? ` rank-${item.rank}` : '';
+
   return (
-    <div className="row-card" onClick={onClick}>
+    <div className={`row-card${medal}`} onClick={onClick}>
       <div className="row-rank">{item.rank}</div>
       <Cover item={item} className="row-cover" />
       <div className="row-info">
