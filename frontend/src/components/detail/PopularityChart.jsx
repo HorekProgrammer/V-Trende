@@ -43,7 +43,7 @@ export default function PopularityChart({ points })
         {ranks.map((r) => {
           const y = rankY(r, top, bottom);
           return (
-            <line key={r} x1={PAD_L} y1={y} x2={W - PAD_R} y2={y} stroke="#2A2534" strokeWidth="1" />
+            <line key={r} x1={PAD_L} y1={y} x2={W - PAD_R} y2={y} style={{ stroke: 'var(--border)' }} strokeWidth="1" />
           );
         })}
 
@@ -63,7 +63,7 @@ export default function PopularityChart({ points })
             cx={x}
             cy={y}
             r="3.5"
-            fill="#0B0A10"
+            style={{ fill: 'var(--chart-dot)' }}
             stroke="#FF7A29"
             strokeWidth="2"
           >

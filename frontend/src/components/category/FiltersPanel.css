@@ -54,7 +54,8 @@
 }
 .sort-chip.is-active 
 { 
-    background: var(--surface-2); color: #fff; 
+    background: var(--surface-2); 
+    color: var(--text);
 }
 
 .sort-chip .ring 
