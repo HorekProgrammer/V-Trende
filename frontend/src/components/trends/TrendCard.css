@@ -123,7 +123,7 @@
 
 .trend-flat {
   color: var(--text-faint);
-  background: rgba(255, 255, 255, .05);
+  background: var(--chip-bg);
 }
 
 .row-arrow {
