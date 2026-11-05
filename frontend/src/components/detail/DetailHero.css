@@ -65,3 +65,28 @@
   color: var(--text-dim);
   letter-spacing: .03em;
 }
+
+.detail-cover-btn 
+{
+  padding: 0;
+  border: 0;
+  background: none;
+  flex-shrink: 0;
+  border-radius: inherit;
+  cursor: zoom-in;
+}
+
+.detail-cover-btn .detail-cover 
+{
+  transition: transform .15s ease-out;
+}
+
+.detail-cover-btn:hover .detail-cover 
+{
+  transform: scale(1.03);
+}
+
+.detail-cover-btn:active .detail-cover 
+{
+  transform: scale(1.08);
+}
