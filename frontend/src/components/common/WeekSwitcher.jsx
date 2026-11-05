@@ -1,3 +1,4 @@
+
 import { formatWeek } from '../../utils/dates';
 import './WeekSwitcher.css';
 
@@ -39,21 +40,9 @@ export default function WeekSwitcher({ weeks, value, onChange })
         <Chevron dir="left" />
       </button>
 
-      <label className="week-label">
-        <span>Неделя: {formatWeek(current)}</span>
-        <select
-          className="week-select"
-          value={current}
-          onChange={(event) => select(event.target.value)}
-          aria-label="Выбрать неделю"
-        >
-          {weeks.map((week) => (
-            <option key={week} value={week}>
-              {formatWeek(week)}
-            </option>
-          ))}
-        </select>
-      </label>
+      <span className="week-label">
+        Неделя: {formatWeek(current)}
+      </span>
 
       <button
         type="button"
