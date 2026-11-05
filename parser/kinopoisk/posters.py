@@ -9,6 +9,8 @@ CANONICAL_HOST = "https://avatars.mds.yandex.net"
 POSTER_SELECTOR = 'img[class*="film-poster"]'
 MAX_MISSES_IN_ROW = 3
 PAUSE_MS = 700
+POSTER_SIZE = "600x900"
+_SIZE_SEGMENT_RE = re.compile(r"/\d+x\d+$")
 
 _HEADING_YEAR_RE = re.compile(r"\([^)]*?\b((?:19|20)\d{2})\b[^)]*\)")
 _TITLE_YEAR_RE = re.compile(r",\s*((?:19|20)\d{2})\s*,")
@@ -46,7 +48,7 @@ def kinopoisk_image_url(value) -> str | None:
         return None
     if not parts.path.startswith(POSTER_PATH):
         return None
-    return CANONICAL_HOST + parts.path
+    return CANONICAL_HOST + _SIZE_SEGMENT_RE.sub(f"/{POSTER_SIZE}", parts.path)
 
 
 def poster_url(found) -> str | None:
