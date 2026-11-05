@@ -41,7 +41,7 @@ class KinopoiskTests(unittest.TestCase):
             "kinopoisk_id": 1000001,
             "year": 2026,
             "rating": 7.5,
-            "cover_url": "https://avatars.mds.yandex.net/get-kinopoisk-image/1/1/136x204",
+            "cover_url": "https://avatars.mds.yandex.net/get-kinopoisk-image/1/1/600x900",
         })
 
         self.assertEqual(result[-1]["position"], 50)
@@ -59,7 +59,7 @@ class KinopoiskTests(unittest.TestCase):
         self.assertIsNone(result[1]["cover_url"])
         self.assertEqual(
             result[2]["cover_url"],
-            "https://avatars.mds.yandex.net/get-kinopoisk-image/1/3/68x102",
+            "https://avatars.mds.yandex.net/get-kinopoisk-image/1/3/600x900",
         )
 
     def test_second_page_positions_start_from_51(self):

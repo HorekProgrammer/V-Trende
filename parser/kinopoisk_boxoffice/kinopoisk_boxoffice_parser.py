@@ -3,7 +3,7 @@ import re
 from urllib.parse import urljoin
 
 from parser.common.covers import clean_image_url, largest_from_srcset
-from parser.kinopoisk.posters import fill_missing_details
+from parser.kinopoisk.posters import fill_missing_details, kinopoisk_image_url
 
 from playwright.sync_api import (
     TimeoutError as PlaywrightTimeoutError,
@@ -175,10 +175,11 @@ def _parse_chart(page):
         images = row.locator("img")
         if images.count() > 0:
             image = images.first
-            cover_url = (
+            raw_cover = (
                 largest_from_srcset(image.get_attribute("srcset"))
                 or image.get_attribute("src")
             )
+            cover_url = kinopoisk_image_url(raw_cover) or clean_image_url(raw_cover)
 
         result.append(
             _parse_row(
