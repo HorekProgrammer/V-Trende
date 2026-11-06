@@ -9,7 +9,7 @@ export default function DetailHero({ item, category })
   const theme = CATEGORY_THEMES[category.id];
   const [viewerOpen, setViewerOpen] = useState(false);
 
-  const cover = <Cover item={item} className="detail-cover" />;
+  const cover = <Cover item={item} className="detail-cover" adaptive />;
 
   return (
     <div className="detail-hero">
