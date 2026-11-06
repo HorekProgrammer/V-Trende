@@ -19,7 +19,7 @@ function shapeOf(image)
   return 'square';
 }
 
-export default function Cover({ item, className, adaptive = false })
+export default function Cover({ item, className, adaptive = false, squareCrop = false})
 {
   const [failedUrl, setFailedUrl] = useState(null);
   const [shape, setShape] = useState({ url: null, value: 'square' });
@@ -35,7 +35,7 @@ export default function Cover({ item, className, adaptive = false })
   };
 
   return (
-    <div className={`cover ${className}${shapeClass}`} style={{ background: coverGrad(item.key) }}>
+    <div className={`cover ${className}${shapeClass}${squareCrop ? ' cover--movie' : ''}`} style={{ background: coverGrad(item.key) }}>
       {initials(item.title)}
       {showImage && (
         <img

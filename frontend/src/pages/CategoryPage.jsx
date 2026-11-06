@@ -76,6 +76,7 @@ function CategoryView({ category }) {
                 <TrendCard
                   key={item.key}
                   item={item}
+                  isMovie={category.id === 'movies'}
                   onClick={() => navigate(`/trend/${item.key}${week ? `?week=${week}` : ''}`)}
                 />
               ))}
