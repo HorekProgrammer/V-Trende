@@ -5,6 +5,7 @@ import CategoryHero from '../components/category/CategoryHero';
 import FiltersPanel from '../components/category/FiltersPanel';
 import DataState from '../components/common/DataState';
 import WeekSwitcher from '../components/common/WeekSwitcher';
+import FAQ from '../components/common/FAQ';
 import { CATEGORY_THEMES, themeWash } from '../components/category/categoryThemes';
 import { CATEGORIES } from '../components/category/categories';
 import { useApi } from '../api/useApi';
@@ -81,6 +82,7 @@ function CategoryView({ category }) {
             </DataState>
           </div>
         </div>
+        <FAQ />
       </div>
     </div>
   );
