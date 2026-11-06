@@ -29,7 +29,7 @@ export default function TrendCard({ item, onClick })
   return (
     <div className={`row-card${medal}`} onClick={onClick}>
       <div className="row-rank">{item.rank}</div>
-      <Cover item={item} className="row-cover" />
+      <Cover item={item} className="row-cover" adaptive />
       <div className="row-info">
         <div className="row-title">{item.title}</div>
         <div className="row-sub">{item.subtitle}</div>
