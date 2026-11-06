@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import './GroupBlock.css';
 import MiniCard from './MiniCard';
 import LegendRow from './LegendRow';
@@ -9,8 +9,13 @@ export default function GroupBlock({ id, title, description, items, onItemClick,
   const cardRowRef = useRef(null);
   const isCarousel = id === 'group-global';
 
-  const scrollCarousel = (direction) =>
+  useEffect(() =>
   {
+    if (!isCarousel || items.length === 0)
+    {
+      return;
+    }
+
     const container = cardRowRef.current;
 
     if (!container)
@@ -18,9 +23,85 @@ export default function GroupBlock({ id, title, description, items, onItemClick,
       return;
     }
 
-    const maxScroll = container.scrollWidth - container.clientWidth;
+    const sets = container.querySelectorAll('.carousel-set');
 
-    if (maxScroll <= 0)
+    if (sets.length !== 3)
+    {
+      return;
+    }
+
+    const setWidth = sets[0].offsetWidth;
+
+    if (setWidth <= 0)
+    {
+      return;
+    }
+
+    container.style.scrollBehavior = 'auto';
+    container.scrollLeft = setWidth;
+    container.style.scrollBehavior = '';
+
+    let isAdjusting = false;
+    let animationFrame = null;
+
+    const handleScroll = () =>
+    {
+      if (isAdjusting)
+      {
+        return;
+      }
+
+      if (animationFrame)
+      {
+        cancelAnimationFrame(animationFrame);
+      }
+
+      animationFrame = requestAnimationFrame(() =>
+      {
+        const leftBoundary = setWidth;
+        const rightBoundary = setWidth * 2;
+
+        if (container.scrollLeft < leftBoundary)
+        {
+          isAdjusting = true;
+          container.style.scrollBehavior = 'auto';
+          container.scrollLeft += setWidth;
+          container.style.scrollBehavior = '';
+
+          requestAnimationFrame(() =>
+          {
+            isAdjusting = false;
+          });
+        }
+        else if (container.scrollLeft >= rightBoundary)
+        {
+          isAdjusting = true;
+          container.style.scrollBehavior = 'auto';
+          container.scrollLeft -= setWidth;
+          container.style.scrollBehavior = '';
+
+          requestAnimationFrame(() =>
+          {
+            isAdjusting = false;
+          });
+        }
+      });
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () =>
+    {
+      container.removeEventListener('scroll', handleScroll);
+      cancelAnimationFrame(animationFrame);
+    };
+  }, [isCarousel, items]);
+
+  const scrollCarousel = (direction) =>
+  {
+    const container = cardRowRef.current;
+
+    if (!container)
     {
       return;
     }
@@ -32,32 +113,32 @@ export default function GroupBlock({ id, title, description, items, onItemClick,
       return;
     }
 
-    const styles = window.getComputedStyle(container);
-    const gap = parseFloat(styles.columnGap) || 0;
-    const step = firstCard.offsetWidth + gap;
+    const styles = window.getComputedStyle(firstCard);
+    const containerStyles = window.getComputedStyle(container);
+    const cardWidth = firstCard.getBoundingClientRect().width;
+    const gap = parseFloat(containerStyles.columnGap) || 0;
+    const step = cardWidth + gap;
 
-    if (direction === 'next')
+    container.scrollBy(
     {
-      if (container.scrollLeft >= maxScroll - 2)
-      {
-        container.scrollTo({ left: 0, behavior: 'smooth' });
-      }
-      else
-      {
-        container.scrollBy({ left: step, behavior: 'smooth' });
-      }
-    }
-    else
-    {
-      if (container.scrollLeft <= 2)
-      {
-        container.scrollTo({ left: maxScroll, behavior: 'smooth' });
-      }
-      else
-      {
-        container.scrollBy({ left: -step, behavior: 'smooth' });
-      }
-    }
+      left: direction === 'next' ? step : -step,
+      behavior: 'smooth'
+    });
+  };
+
+  const renderCards = (setIndex) =>
+  {
+    return (
+      <div className="carousel-set" key={setIndex}>
+        {items.map((item, index) => (
+          <MiniCard
+            key={`${setIndex}-${item.key || index}`}
+            item={item}
+            onClick={() => onItemClick?.(item)}
+          />
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -119,13 +200,21 @@ export default function GroupBlock({ id, title, description, items, onItemClick,
         </div>
       ) : (
         <div className="card-row" ref={isCarousel ? cardRowRef : null}>
-          {items.map((item) => (
-            <MiniCard
-              key={item.key}
-              item={item}
-              onClick={() => onItemClick?.(item)}
-            />
-          ))}
+          {isCarousel ? (
+            <>
+              {renderCards(0)}
+              {renderCards(1)}
+              {renderCards(2)}
+            </>
+          ) : (
+            items.map((item) => (
+              <MiniCard
+                key={item.key}
+                item={item}
+                onClick={() => onItemClick?.(item)}
+              />
+            ))
+          )}
         </div>
       )}
     </div>

@@ -234,3 +234,50 @@
     width: 82px;
   }
 }
+
+.group-block--carousel .carousel-card
+{
+  flex: 0 0 auto;
+}
+
+.group-block--carousel .carousel-card .mini-card
+{
+  height: 100%;
+}
+
+.group-block--carousel .card-row
+{
+  gap: 0;
+}
+
+.group-block--carousel .carousel-set
+{
+  display: flex;
+  flex: 0 0 auto;
+  gap: 16px;
+  padding-right: 16px;
+  box-sizing: border-box;
+}
+
+.group-block--carousel .carousel-set .mini-card
+{
+  flex: 0 0 168px;
+  width: 168px;
+  min-width: 168px;
+}
+
+@media (max-width: 560px)
+{
+  .group-block--carousel .carousel-set
+  {
+    gap: 10px;
+    padding-right: 10px;
+  }
+
+  .group-block--carousel .carousel-set .mini-card
+  {
+    flex-basis: 154px;
+    width: 154px;
+    min-width: 154px;
+  }
+}
