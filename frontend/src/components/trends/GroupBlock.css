@@ -51,8 +51,8 @@
 
 .group-block--carousel .card-row
 {
+  gap: 0;
   scrollbar-width: none;
-  scroll-behavior: smooth;
   overscroll-behavior-x: contain;
 }
 
@@ -143,11 +143,17 @@
 
 .grid-2col .mini-cover
 {
-  aspect-ratio: auto;
+  aspect-ratio: 3 / 4;
   height: 100%;
-  width: 96px;
+  width: auto;
   flex-shrink: 0;
+  border-radius: calc(var(--radius-m) - 1px) 0 0 calc(var(--radius-m) - 1px);
   font-size: 17px;
+}
+
+.grid-2col .mini-cover .cover-img
+{
+  object-fit: fill;
 }
 
 .grid-2col .mini-body
@@ -228,26 +234,6 @@
   {
     height: 112px;
   }
-
-  .grid-2col .mini-cover
-  {
-    width: 82px;
-  }
-}
-
-.group-block--carousel .carousel-card
-{
-  flex: 0 0 auto;
-}
-
-.group-block--carousel .carousel-card .mini-card
-{
-  height: 100%;
-}
-
-.group-block--carousel .card-row
-{
-  gap: 0;
 }
 
 .group-block--carousel .carousel-set
@@ -280,4 +266,19 @@
     width: 154px;
     min-width: 154px;
   }
+}
+
+.group-block--carousel .mini-cover
+{
+  aspect-ratio: 3 / 4;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
+}
+
+.group-block--carousel .mini-cover .cover-img
+{
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  border-radius: 12px 12px 0 0;
 }

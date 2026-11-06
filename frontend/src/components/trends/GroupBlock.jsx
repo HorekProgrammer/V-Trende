@@ -25,67 +25,46 @@ export default function GroupBlock({ id, title, description, items, onItemClick,
 
     const sets = container.querySelectorAll('.carousel-set');
 
-    if (sets.length !== 3)
+    if (sets.length !== 3 || sets[0].offsetWidth <= 0)
     {
       return;
     }
 
-    const setWidth = sets[0].offsetWidth;
+    container.scrollLeft = sets[0].offsetWidth;
 
-    if (setWidth <= 0)
+    let timer = null;
+
+    const recenter = () =>
     {
-      return;
-    }
+      const setWidth = sets[0].offsetWidth;
 
-    container.style.scrollBehavior = 'auto';
-    container.scrollLeft = setWidth;
-    container.style.scrollBehavior = '';
-
-    let isAdjusting = false;
-    let animationFrame = null;
-
-    const handleScroll = () =>
-    {
-      if (isAdjusting)
+      if (setWidth <= 0)
       {
         return;
       }
 
-      if (animationFrame)
+      const half = setWidth / 2;
+      const current = container.scrollLeft;
+      const normalized = half + ((((current - half) % setWidth) + setWidth) % setWidth);
+
+      if (Math.abs(normalized - current) > 0.5)
       {
-        cancelAnimationFrame(animationFrame);
+        container.scrollLeft = normalized;
+      }
+    };
+
+    const handleScroll = () =>
+    {
+      const maxScroll = container.scrollWidth - container.clientWidth;
+
+      if (container.scrollLeft <= 1 || container.scrollLeft >= maxScroll - 1)
+      {
+        recenter();
+        return;
       }
 
-      animationFrame = requestAnimationFrame(() =>
-      {
-        const leftBoundary = setWidth;
-        const rightBoundary = setWidth * 2;
-
-        if (container.scrollLeft < leftBoundary)
-        {
-          isAdjusting = true;
-          container.style.scrollBehavior = 'auto';
-          container.scrollLeft += setWidth;
-          container.style.scrollBehavior = '';
-
-          requestAnimationFrame(() =>
-          {
-            isAdjusting = false;
-          });
-        }
-        else if (container.scrollLeft >= rightBoundary)
-        {
-          isAdjusting = true;
-          container.style.scrollBehavior = 'auto';
-          container.scrollLeft -= setWidth;
-          container.style.scrollBehavior = '';
-
-          requestAnimationFrame(() =>
-          {
-            isAdjusting = false;
-          });
-        }
-      });
+      clearTimeout(timer);
+      timer = setTimeout(recenter, 140);
     };
 
     container.addEventListener('scroll', handleScroll, { passive: true });
@@ -93,7 +72,7 @@ export default function GroupBlock({ id, title, description, items, onItemClick,
     return () =>
     {
       container.removeEventListener('scroll', handleScroll);
-      cancelAnimationFrame(animationFrame);
+      clearTimeout(timer);
     };
   }, [isCarousel, items]);
 
@@ -113,7 +92,6 @@ export default function GroupBlock({ id, title, description, items, onItemClick,
       return;
     }
 
-    const styles = window.getComputedStyle(firstCard);
     const containerStyles = window.getComputedStyle(container);
     const cardWidth = firstCard.getBoundingClientRect().width;
     const gap = parseFloat(containerStyles.columnGap) || 0;

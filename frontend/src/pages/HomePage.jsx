@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import GroupBlock from '../components/trends/GroupBlock';
 import Top3Block from '../components/trends/Top3Block';
 import CrownIcon from '../components/icons/CrownIcon';
@@ -19,10 +19,34 @@ const SECTIONS =
 
 export default function HomePage() 
 {
+  const location = useLocation();
   const navigate = useNavigate();
   const [activeId, setActiveId] = useState(SECTIONS[0].id);
   const { data, loading, error } = useApi(feedPath());
-  const openTrend = (item) => navigate(`/trend/${item.key}`);
+  const openTrend = (item) =>
+  {
+    navigate(`/trend/${item.key}`, {
+      state: {
+        from: location.pathname + location.search,
+        scrollY: window.scrollY
+      }
+    });
+  };
+
+  useEffect(() =>
+  {
+    const scrollY = location.state?.restoreScrollY;
+
+    if (scrollY == null || !data)
+    {
+      return;
+    }
+
+    requestAnimationFrame(() =>
+    {
+      window.scrollTo(0, scrollY);
+    });
+  }, [data, location.key, location.state]);
 
   return (
     <div className="home-layout">
