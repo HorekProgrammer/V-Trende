@@ -38,6 +38,12 @@ export default function DetailPage()
     window.scrollTo(0, 0);
   }, [id]);
 
+  useEffect(() => {
+    if (item) {
+      document.title = `${item.title} • В-Тренде`;
+    }
+  }, [item]);
+
   const notFound = error && (error.status === 404 || error.status === 422);
   if (notFound) 
   {

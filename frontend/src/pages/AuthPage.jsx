@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AuthCard from '../components/auth/AuthCard';
 import FormField from '../components/auth/FormField';
@@ -11,6 +11,8 @@ export default function AuthPage()
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {document.title = 'Регистрация • В-Тренде'}, []);
 
   const handleEmailChange = (e) => 
   {

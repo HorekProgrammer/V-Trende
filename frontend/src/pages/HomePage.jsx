@@ -33,6 +33,8 @@ export default function HomePage()
     });
   };
 
+  useEffect(() => {document.title = 'Главная Страница • В-Тренде'}, []);
+
   useEffect(() =>
   {
     const scrollY = location.state?.restoreScrollY;

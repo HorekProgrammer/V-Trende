@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import TrendCard from '../components/trends/TrendCard';
 import CategoryHero from '../components/category/CategoryHero';
@@ -20,6 +20,7 @@ function CategoryView({ category }) {
   const [sort, setSort] = useState('popular');
   const [selectedGenres, setSelectedGenres] = useState([]);
 
+  useEffect(() => {document.title = `${category.label} • В-Тренде`}, [category.label]); 
   const [week, setWeek] = useWeek();
   const { data: weeks } = useApi(weeksPath());
   const { data, loading, error } = useApi(categoryTrendsPath(category.id, sort, week));
