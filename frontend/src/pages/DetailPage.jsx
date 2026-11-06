@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { useWeek } from '../api/useWeek';
 import DetailHero from '../components/detail/DetailHero';
 import StatGrid from '../components/detail/StatGrid';
@@ -27,6 +27,7 @@ function BackIcon()
 
 export default function DetailPage() 
 {
+  const location = useLocation();
   const { id } = useParams();
   const [week] = useWeek();
   const weekQuery = week ? `?week=${week}` : '';
@@ -53,9 +54,13 @@ export default function DetailPage()
 
   return (
     <div className="detail-wrap">
-      <Link to={category ? `/category/${category.id}${weekQuery}` : `/${weekQuery}`} className="back-btn">
+      <Link
+        to={location.state?.from || (category ? `/category/${category.id}${weekQuery}` : `/${weekQuery}`)}
+        state={location.state?.scrollY != null ? { restoreScrollY: location.state.scrollY } : null}
+        className="back-btn"
+      >
         <BackIcon />
-        {category ? 'Назад к чарту' : 'На главную'}
+        {location.state?.from ? 'Назад' : category ? 'Назад к чарту' : 'На главную'}
       </Link>
 
       <DataState loading={loading} error={error}>

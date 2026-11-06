@@ -25,9 +25,10 @@
   text-align: center;
 }
 
-.row-cover {
+.row-cover
+{
   width: 54px;
-  height: 54px;
+  height: 72px;
   border-radius: 11px;
   flex-shrink: 0;
   display: flex;
@@ -169,9 +170,10 @@
     font-size: 17px;
   }
 
-  .row-cover {
+  .row-cover
+  {
     width: 44px;
-    height: 44px;
+    height: 59px;
     border-radius: 9px;
     font-size: 14px;
   }
