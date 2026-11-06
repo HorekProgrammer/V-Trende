@@ -1,9 +1,11 @@
-.cover {
+.cover
+{
   position: relative;
   overflow: hidden;
 }
 
-.cover-img {
+.cover-img
+{
   position: absolute;
   inset: 0;
   width: 100%;
@@ -20,5 +22,11 @@
 
 .cover--wide .cover-img
 {
+  object-position: center center;
+}
+
+.cover--movie .cover-img
+{
+  object-fit: cover;
   object-position: center center;
 }

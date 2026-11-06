@@ -22,14 +22,14 @@ function Stat({ label, value })
   );
 }
 
-export default function TrendCard({ item, onClick }) 
+export default function TrendCard({ item, onClick, isMovie = false }) 
 {
     const medal = item.rank >= 1 && item.rank <= 3 ? ` rank-${item.rank}` : '';
 
   return (
     <div className={`row-card${medal}`} onClick={onClick}>
       <div className="row-rank">{item.rank}</div>
-      <Cover item={item} className="row-cover" adaptive />
+      <Cover item={item} className="row-cover" adaptive squareCrop={isMovie} />
       <div className="row-info">
         <div className="row-title">{item.title}</div>
         <div className="row-sub">{item.subtitle}</div>
