@@ -2,13 +2,40 @@ import { useState } from 'react';
 import { coverGrad, initials } from '../../utils/trendFormat';
 import './Cover.css';
 
-export default function Cover({ item, className })
+function shapeOf(image)
+{
+  const ratio = image.naturalWidth / image.naturalHeight;
+
+  if (ratio < 0.9)
+  {
+    return 'tall';
+  }
+
+  if (ratio > 1.1)
+  {
+    return 'wide';
+  }
+
+  return 'square';
+}
+
+export default function Cover({ item, className, adaptive = false })
 {
   const [failedUrl, setFailedUrl] = useState(null);
+  const [shape, setShape] = useState({ url: null, value: 'square' });
   const showImage = Boolean(item.cover) && item.cover !== failedUrl;
+  const shapeClass = adaptive && shape.url === item.cover ? ` cover--${shape.value}` : '';
+
+  const handleLoad = (event) =>
+  {
+    if (adaptive)
+    {
+      setShape({ url: item.cover, value: shapeOf(event.currentTarget) });
+    }
+  };
 
   return (
-    <div className={`cover ${className}`} style={{ background: coverGrad(item.key) }}>
+    <div className={`cover ${className}${shapeClass}`} style={{ background: coverGrad(item.key) }}>
       {initials(item.title)}
       {showImage && (
         <img
@@ -17,6 +44,7 @@ export default function Cover({ item, className })
           alt=""
           loading="lazy"
           referrerPolicy="no-referrer"
+          onLoad={handleLoad}
           onError={() => setFailedUrl(item.cover)}
         />
       )}

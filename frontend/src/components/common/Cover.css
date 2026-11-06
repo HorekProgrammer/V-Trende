@@ -12,3 +12,13 @@
   object-position: center top;
   border-radius: inherit;
 }
+
+.cover--tall .cover-img
+{
+  object-fit: fill;
+}
+
+.cover--wide .cover-img
+{
+  object-position: center center;
+}

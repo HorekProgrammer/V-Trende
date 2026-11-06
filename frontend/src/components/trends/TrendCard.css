@@ -27,7 +27,7 @@
 
 .row-cover
 {
-  width: 54px;
+  width: 72px;
   height: 72px;
   border-radius: 11px;
   flex-shrink: 0;
@@ -172,8 +172,8 @@
 
   .row-cover
   {
-    width: 44px;
-    height: 59px;
+    width: 56px;
+    height: 56px;
     border-radius: 9px;
     font-size: 14px;
   }
