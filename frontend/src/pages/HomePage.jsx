@@ -5,6 +5,7 @@ import Top3Block from '../components/trends/Top3Block';
 import CrownIcon from '../components/icons/CrownIcon';
 import HomeSidebar from '../components/common/HomeSidebar';
 import DataState from '../components/common/DataState';
+import FAQ from '../components/common/FAQ';
 import { useApi } from '../api/useApi';
 import { feedPath } from '../api/paths';
 import './HomePage.css';
@@ -105,6 +106,7 @@ export default function HomePage()
             </>
           )}
         </DataState>
+        <FAQ />
       </main>
     </div>
   );
