@@ -82,27 +82,59 @@
   background: var(--orange);
 }
 
-.checkbox-row 
+.checkbox-row
 {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 2px;
+  padding: 10px;
+  margin-bottom: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
   font-size: 13.5px;
   color: var(--text-dim);
   cursor: pointer;
+  transition: background .2s ease, border-color .2s ease;
 }
 
-.checkbox-row input 
+.checkbox-row:hover
 {
-  accent-color: var(--orange);
-  width: 15px;
-  height: 15px;
+  color: var(--text);
+  border-color: var(--text-faint);
 }
 
-.checkbox-row:hover 
-{ 
-    color: var(--text); 
+.checkbox-row input
+{
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin: 0;
+  border: 2px solid var(--text-faint);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+}
+
+.checkbox-row input:checked
+{
+  border-color: var(--orange);
+  background: var(--orange);
+}
+
+.checkbox-row input:checked::after
+{
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .filters-reset 
