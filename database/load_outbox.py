@@ -24,6 +24,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from .db import PROJECT_ROOT, DatabaseConfigError, connect
+from .manual_covers import manual_cover
 
 OUTBOX_DIR = PROJECT_ROOT / "data" / "outbox"
 CATEGORIES = {"music", "games", "movies", "streamers"}
@@ -194,7 +195,13 @@ def _resolve_trend(conn, source: str, category: str, entry: dict) -> int:
             (trend_id, source, entry["external_id"], entry["url"]),
         )
 
-    if entry["cover_url"] is not None:
+    override_cover = manual_cover(category, entry["match_key"])
+    if override_cover is not None:
+        conn.execute(
+            "UPDATE trends SET cover_url = %s, cover_source = 'manual' WHERE id = %s",
+            (override_cover, trend_id),
+        )
+    elif entry["cover_url"] is not None:
         conn.execute(
             """UPDATE trends SET cover_url = %s, cover_source = %s
                WHERE id = %s AND (cover_url IS NULL OR cover_source = %s)""",

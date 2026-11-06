@@ -147,6 +147,23 @@ class LoaderTests(DatabaseTestCase):
         self.assertEqual(self.scalar("SELECT COUNT(*) FROM trend_history"), 2)
         self.assertEqual(self.scalar("SELECT subtitle FROM trends"), "Артист 1")
 
+    def test_manual_cover_overrides_source_cover(self):
+        payload = build_payload("yandex_music", [{
+            "position": 1,
+            "title": "Billie Jean",
+            "artists": ["Michael Jackson"],
+            "cover_url": "https://example.com/wrong.jpg",
+        }], week=W1)
+        self.load(payload)
+        self.assertEqual(
+            self.rows("SELECT cover_url, cover_source FROM trends"),
+            [(
+                "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/32/4f/fd/"
+                "324ffda2-9e51-8f6a-0c2d-c6fd2b41ac55/074643811224.jpg/600x600bb.jpg",
+                "manual",
+            )],
+        )
+
     def test_external_id_links_steam_charts_and_title_links_epic(self):
         self.load(build_payload("steam", steam((1, 1)), week=W1))
         self.load(build_payload("steam_players", steam((7, 1)), week=W1))
