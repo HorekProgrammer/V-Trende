@@ -80,6 +80,15 @@ def run_game_genres(week: date) -> int:
     return 0
 
 
+def run_game_covers() -> int:
+    from parser.game_covers import fill_game_covers
+    with connect() as conn:
+        stats = fill_game_covers(conn, log=lambda message: print(message, file=sys.stderr))
+    print(f"Обложки игр: найдено {stats['found']}, нет на StopGame {stats['missing']}, "
+          f"ошибок сети {stats['errors']}.", file=sys.stderr)
+    return 0
+
+
 def run_chart(key: str, save: bool, week: date | None = None) -> tuple[bool, str]:
     chart = CHARTS[key]
     try:
@@ -181,6 +190,14 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"[game_genres] ОШИБКА: {error}", file=sys.stderr, flush=True)
             else:
                 print("[game_genres] OK", file=sys.stderr, flush=True)
+
+            print("\n[game_covers] запуск…", file=sys.stderr, flush=True)
+            try:
+                run_game_covers()
+            except Exception as error:  # noqa: BLE001
+                print(f"[game_covers] пропущено: {error}", file=sys.stderr, flush=True)
+            else:
+                print("[game_covers] OK", file=sys.stderr, flush=True)
 
     return 1 if failed or whatstat_failed or wordstat_failed or genres_failed else 0
 

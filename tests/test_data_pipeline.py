@@ -167,8 +167,11 @@ class RunAllFailureTests(unittest.TestCase):
         self.music_genres_patcher.start()
         self.game_genres_patcher = patch("parser.run_all.run_game_genres", return_value=0)
         self.game_genres_patcher.start()
+        self.game_covers_patcher = patch("parser.run_all.run_game_covers", return_value=0)
+        self.game_covers_patcher.start()
 
     def tearDown(self):
+        self.game_covers_patcher.stop()
         self.game_genres_patcher.stop()
         self.music_genres_patcher.stop()
 
