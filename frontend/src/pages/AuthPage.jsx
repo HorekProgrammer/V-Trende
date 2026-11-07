@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import AuthCard from '../components/auth/AuthCard';
 import FormField from '../components/auth/FormField';
 import { validateEmail, validatePassword } from '../utils/validation';
+import { apiPost } from '../api/client';
+import { registerPath } from '../api/paths';
 import './AuthPage.css';
 
 export default function AuthPage() 
@@ -11,6 +13,8 @@ export default function AuthPage()
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {document.title = 'Регистрация • В-Тренде'}, []);
 
@@ -26,9 +30,10 @@ export default function AuthPage()
     if (errors.password) setErrors((prev) => ({ ...prev, password: '' }));
   };
 
-  const handleSubmit = (e) => 
+  const handleSubmit = async (e) => 
   {
     e.preventDefault();
+    if (submitting) return;
 
     const nextErrors = 
     {
@@ -41,7 +46,29 @@ export default function AuthPage()
       return;
     }
 
-    navigate('/');
+    setFormError('');
+    setSubmitting(true);
+    try 
+    {
+      // Сервер создаёт аккаунт и сразу выполняет вход: ставит cookie сессии.
+      await apiPost(registerPath(), { email: email.trim(), password });
+      navigate('/');
+    } 
+    catch (error) 
+    {
+      if (error.fields && (error.fields.email || error.fields.password)) 
+      {
+        setErrors({ email: error.fields.email || '', password: error.fields.password || '' });
+      } 
+      else 
+      {
+        setFormError(error.status ? error.message : 'Сервер недоступен. Попробуйте позже.');
+      }
+    } 
+    finally 
+    {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -72,8 +99,10 @@ export default function AuthPage()
             error={errors.password}
           />
 
-          <button className="auth-submit" type="submit">
-            Зарегистрироваться
+          {formError && <div className="auth-form-error" role="alert">{formError}</div>}
+
+          <button className="auth-submit" type="submit" disabled={submitting}>
+            {submitting ? 'Регистрация…' : 'Зарегистрироваться'}
           </button>
         </form>
 
