@@ -38,6 +38,7 @@ python -m database.load_outbox         # 4. загрузить Wordstat
 | `008_covers.sql` | обложки: `trends.cover_url` и `cover_source`, поле `cover_url` в представлениях карточек |
 | `009_years.sql` | год: `trends.year` (перенос года фильмов и игр из подзаголовка), поле `year` в представлениях карточек |
 | `012_drop_years.sql` | столбец `year` удалён: год остаётся только у фильмов, в подзаголовке |
+| `013_user_sessions.sql` | сессии пользователей `user_sessions` (хэш токена из cookie) для регистрации и входа |
 
 ## Представления для выдачи
 
