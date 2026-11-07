@@ -40,7 +40,7 @@ class MigrationFilesTests(unittest.TestCase):
         migrations = discover()
         self.assertEqual(
             [m.version for m in migrations],
-            ["001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "011", "012"],
+            ["001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "011", "012", "013"],
         )
         self.assertTrue(all(m.sql.strip() for m in migrations))
 

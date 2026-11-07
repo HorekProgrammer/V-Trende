@@ -4,13 +4,14 @@ import hmac
 from datetime import date
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
+from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from database.db import connect, settings
 from database.load_outbox import PayloadError, load_payload, refresh_rankings
 
-from . import repository
+from . import auth, repository
 
 app = FastAPI(title="V-Trende API", version="1.0.0")
 app.add_middleware(
@@ -61,6 +62,64 @@ def ingest_payload(payload: dict, conn, expected_type: str) -> dict:
     except PayloadError as error:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(error)) from None
     return {"message": message}
+
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+
+
+def _cookie_secure() -> bool:
+    # На локальной разработке сайт работает по http, там флаг Secure ставить нельзя.
+    return (settings().get("SESSION_COOKIE_SECURE") or "").strip().lower() in {"1", "true", "yes"}
+
+
+def _set_session_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        auth.SESSION_COOKIE,
+        token,
+        max_age=int(auth.SESSION_TTL.total_seconds()),
+        httponly=True,       # недоступна JavaScript: XSS не украдёт сессию
+        samesite="lax",      # не отправляется с чужих сайтов при POST-запросах
+        secure=_cookie_secure(),
+        path="/",
+    )
+
+
+@app.post("/api/v1/auth/register", status_code=status.HTTP_201_CREATED)
+def register(body: RegisterRequest, response: Response, conn: Db):
+    """Регистрация по email и паролю. Сразу выполняет вход: ставит cookie сессии.
+
+    Ошибки: 422 — некорректные поля, 409 — email уже занят.
+    В обоих случаях detail = {"message": ..., "fields": {"email"|"password": ...}}.
+    """
+    errors = auth.validate_registration(body.email, body.password)
+    if errors:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            {"message": "Проверьте поля формы.", "fields": errors},
+        )
+    try:
+        user, token = auth.register(conn, body.email, body.password)
+    except auth.EmailTaken:
+        message = "Пользователь с таким email уже зарегистрирован"
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, {"message": message, "fields": {"email": message}}
+        ) from None
+    _set_session_cookie(response, token)
+    return {"user": auth.public_user(user)}
+
+
+@app.get("/api/v1/auth/me")
+def me(
+    conn: Db,
+    vtrende_session: Annotated[str | None, Cookie()] = None,
+):
+    """Текущий пользователь по cookie сессии; 401, если вход не выполнен."""
+    user = auth.session_user(conn, vtrende_session)
+    if user is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Вход не выполнен.")
+    return {"user": auth.public_user(user)}
 
 
 @app.get("/api/v1/health")
