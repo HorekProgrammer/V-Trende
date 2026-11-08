@@ -28,3 +28,36 @@
     padding: 20px 16px 70px;
   }
 }
+
+.chart-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  margin-top: 20px;
+}
+
+.chart-locked-icon {
+  font-size: 40px;
+  margin-bottom: 16px;
+  opacity: 0.8;
+}
+
+.chart-locked h3 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.chart-locked p {
+  color: var(--text-dim);
+  font-size: 14px;
+  margin-bottom: 20px;
+  max-width: 400px;
+}
