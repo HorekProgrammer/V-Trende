@@ -125,6 +125,11 @@ class TwitchTests(unittest.TestCase):
         self.assertEqual(result[0], {"channel": "Канал 1", "total_followers": 3000})
         self.assertNotIn("position", result[0])
 
+    def test_accepts_unknown_follower_count(self):
+        html = page().replace("<td>3000</td>", "<td>--</td>", 1)
+        result = parse_ranking_html(html)
+        self.assertEqual(result[0]["total_followers"], 0)
+
     def test_parses_ranking_from_deepseek_markdown(self):
         markdown = "\n".join(
             f"#{position} | Channel_{position} | {position * 100} | 10 hours |"
