@@ -357,6 +357,19 @@ class TwitchTests(unittest.TestCase):
         self.assertEqual(result["total_followers"], 2_304_573)
         fetch_markdown.assert_called_once_with("https://twitchtracker.com/strogo", timeout=9)
 
+    @patch("parser.twitch.twitch_parser.fetch_page_markdown", return_value=weekly_markdown())
+    @patch("parser.twitch.twitch_parser.urlopen")
+    def test_uses_deepseek_fetch_when_fragments_request_fails(self, open_url, fetch_markdown):
+        url = "https://twitchtracker.com/strogo/fragments?expires=1&signature=abc"
+        profile = "<script>window.channel={id:233741947}</script>" + ecs({"fragments": url})
+        open_url.side_effect = [response(profile), URLError("timeout")]
+        from parser.twitch.twitch_parser import _fetch_channel_stats
+
+        result = _fetch_channel_stats("strogo", 9)
+
+        self.assertEqual(result["average_viewers"], 36889)
+        fetch_markdown.assert_called_once_with("https://twitchtracker.com/strogo", timeout=9)
+
     @patch("parser.twitch.twitch_parser.urlopen")
     def test_rejects_incomplete_page(self, open_url):
         open_url.return_value = response(page(count=49))

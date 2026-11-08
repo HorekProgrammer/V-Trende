@@ -368,7 +368,11 @@ def _fetch_channel_stats(slug: str, timeout: float) -> dict:
         },
         method="POST",
     )
-    fragments_html = _read(fragments_request, timeout, f"статистика канала {slug}")
+    try:
+        fragments_html = _read(fragments_request, timeout, f"статистика канала {slug}")
+    except RuntimeError:
+        markdown = fetch_page_markdown(profile_url, timeout=timeout)
+        return parse_weekly_stats_markdown(markdown)
     try:
         return parse_weekly_stats_html(fragments_html)
     except RuntimeError as error:
