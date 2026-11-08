@@ -95,6 +95,11 @@ def _integer(value: str) -> int:
     return int(value.lstrip("+").replace(" ", "").replace(",", ""))
 
 
+def _followers(value: str) -> int:
+    """Parse the ranking follower count, which TwitchTracker may leave unknown."""
+    return 0 if value.strip() == "--" else _integer(value)
+
+
 def _parse_ranking_entries(html: str, *, expected_start: int | None = None) -> list[dict]:
     parser = _RankingParser()
     parser.feed(html)
@@ -114,7 +119,7 @@ def _parse_ranking_entries(html: str, *, expected_start: int | None = None) -> l
             result.append({
                 "position": position,
                 "channel": channel,
-                "total_followers": _integer(cells[9]["text"]),
+                "total_followers": _followers(cells[9]["text"]),
                 "_slug": slug_match.group(1),
                 "_cover": twitch_avatar_url(cells[1]["img"] or cells[2]["img"]),
             })
