@@ -1,73 +1,65 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { apiPost } from '../api/client';
 import AuthCard from '../components/auth/AuthCard';
 import FormField from '../components/auth/FormField';
 import { validateEmail, validatePassword } from '../utils/validation';
-import { apiPost } from '../api/client';
-import { registerPath } from '../api/paths';
 import './AuthPage.css';
 
-export default function AuthPage() 
-{
+export default function AuthPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
-  const [formError, setFormError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {document.title = 'Регистрация • В-Тренде'}, []);
+  useEffect(() => {
+    document.title = 'Регистрация • В-Тренде';
+  }, []);
 
-  const handleEmailChange = (e) => 
-  {
+  const handleEmailChange = (e) => {
     setEmail(e.target.value);
     if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
   };
 
-  const handlePasswordChange = (e) => 
-  {
+  const handlePasswordChange = (e) => {
     setPassword(e.target.value);
     if (errors.password) setErrors((prev) => ({ ...prev, password: '' }));
   };
 
-  const handleSubmit = async (e) => 
-  {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (submitting) return;
 
-    const nextErrors = 
-    {
+    const nextErrors = {
       email: validateEmail(email.trim()),
       password: validatePassword(password),
     };
-    if (nextErrors.email || nextErrors.password) 
-    {
+    
+    if (nextErrors.email || nextErrors.password) {
       setErrors(nextErrors);
       return;
     }
 
-    setFormError('');
-    setSubmitting(true);
-    try 
-    {
-      // Сервер создаёт аккаунт и сразу выполняет вход: ставит cookie сессии.
-      await apiPost(registerPath(), { email: email.trim(), password });
+    setIsLoading(true);
+    setServerError('');
+
+    try {
+      await apiPost('/auth/register', {
+        email: email.trim(),
+        password: password,
+      });
+
       navigate('/');
-    } 
-    catch (error) 
-    {
-      if (error.fields && (error.fields.email || error.fields.password)) 
-      {
-        setErrors({ email: error.fields.email || '', password: error.fields.password || '' });
-      } 
-      else 
-      {
-        setFormError(error.status ? error.message : 'Сервер недоступен. Попробуйте позже.');
+    } catch (err) {
+      const message = err.message || 'Ошибка регистрации. Попробуйте позже.';
+      setServerError(message);
+      
+      if (err.fields) {
+        setErrors(err.fields);
       }
-    } 
-    finally 
-    {
-      setSubmitting(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -78,6 +70,12 @@ export default function AuthPage()
         subtitle="Сохраняйте чарты и следите за трендами"
       >
         <form onSubmit={handleSubmit} noValidate>
+          {serverError && (
+            <div className="auth-form-error">
+              {serverError}
+            </div>
+          )}
+
           <FormField
             id="reg-email"
             label="Email"
@@ -99,10 +97,8 @@ export default function AuthPage()
             error={errors.password}
           />
 
-          {formError && <div className="auth-form-error" role="alert">{formError}</div>}
-
-          <button className="auth-submit" type="submit" disabled={submitting}>
-            {submitting ? 'Регистрация…' : 'Зарегистрироваться'}
+          <button className="auth-submit" type="submit" disabled={isLoading}>
+            {isLoading ? 'Отправка...' : 'Зарегистрироваться'}
           </button>
         </form>
 

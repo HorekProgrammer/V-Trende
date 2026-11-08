@@ -6,7 +6,6 @@ export class ApiError extends Error
   {
     super(message);
     this.status = status;
-    // Ошибки по полям формы, например { email: 'Пользователь с таким email уже зарегистрирован' }.
     this.fields = fields;
   }
 }
@@ -26,7 +25,6 @@ async function toApiError(res)
     }
   } catch 
   {
-    // Если тело ответа не JSON, оставляем универсальное сообщение HTTP.
   }
   return new ApiError(res.status, message, fields);
 }
@@ -43,7 +41,6 @@ export async function apiPost(path, data)
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    // Cookie сессии ставит и читает сервер; same-origin — запросы идут через прокси Vite.
     credentials: 'same-origin',
     body: JSON.stringify(data),
   });

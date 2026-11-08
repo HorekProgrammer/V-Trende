@@ -8,10 +8,10 @@ import DataState from '../components/common/DataState';
 import { CATEGORIES } from '../components/category/categories';
 import { useApi } from '../api/useApi';
 import { trendPath } from '../api/paths';
+import { useAuth } from '../api/useAuth';
 import './DetailPage.css';
 
-function BackIcon() 
-{
+function BackIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
@@ -25,8 +25,8 @@ function BackIcon()
   );
 }
 
-export default function DetailPage() 
-{
+export default function DetailPage() {
+  const { isAuthenticated, loading: authLoading } = useAuth();
   const location = useLocation();
   const { id } = useParams();
   const [week] = useWeek();
@@ -58,6 +58,10 @@ export default function DetailPage()
     );
   }
 
+  if (authLoading) {
+    return <DataState loading={true} />;
+  }
+
   return (
     <div className="detail-wrap">
       <Link
@@ -74,8 +78,18 @@ export default function DetailPage()
           <>
             <DetailHero item={item} category={category} />
             <StatGrid item={item} />
-            {!item.isNew && (
-              <PopularityCard key={item.key} history={item.history} topSize={category.topSize} />
+            
+            {isAuthenticated ? (
+              !item.isNew && (
+                <PopularityCard key={item.key} history={item.history} topSize={category.topSize} />
+              )
+            ) : (
+              <div className="chart-locked">
+                <div className="chart-locked-icon">🔒</div>
+                <h3>График доступен только зарегистрированным</h3>
+                <p>Войдите или создайте аккаунт, чтобы видеть динамику популярности тренда.</p>
+                <Link to="/auth" className="btn-primary">Зарегистрироваться</Link>
+              </div>
             )}
           </>
         )}
