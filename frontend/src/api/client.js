@@ -41,7 +41,7 @@ export async function apiPost(path, data)
   const res = await fetch(`${BASE}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    credentials: 'same-origin',
+    credentials: 'include',
     body: JSON.stringify(data),
   });
   if (!res.ok) throw await toApiError(res);

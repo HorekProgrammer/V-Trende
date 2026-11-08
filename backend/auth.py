@@ -33,6 +33,9 @@ SESSION_TTL = timedelta(days=30)
 class EmailTaken(Exception):
     """Пользователь с таким email уже есть."""
 
+class InvalidCredentials(Exception):
+    """Неверный email или пароль."""
+
 
 def normalize_email(value: str) -> str:
     """Email без пробелов по краям и в нижнем регистре: Mark@Mail.ru == mark@mail.ru."""
@@ -157,3 +160,14 @@ def register(conn, email: str, password: str) -> tuple[dict, str]:
         user = create_user(conn, email, password)
         token = create_session(conn, user["id"])
     return user, token
+
+def login(conn, email: str, password: str) -> tuple[dict, str]:
+    """Вход по email и паролю; возвращает (пользователь, токен сессии)."""
+    row = conn.execute(
+        "SELECT id, email, password_hash, created_at FROM users WHERE email = %s",
+        (normalize_email(email),),
+    ).fetchone()
+    if row is None or not verify_password(password, row[2]):
+        raise InvalidCredentials
+    user = {"id": row[0], "email": row[1], "created_at": row[3]}
+    return user, create_session(conn, user["id"])

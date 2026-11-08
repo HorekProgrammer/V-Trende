@@ -13,3 +13,7 @@ export const trendPath = (id) => `/trends/${encodeURIComponent(id)}`;
 export const registerPath = () => '/auth/register';
 
 export const mePath = () => '/auth/me';
+
+export const loginPath = () => '/auth/login'; 
+
+export const logoutPath = () => '/auth/logout';
