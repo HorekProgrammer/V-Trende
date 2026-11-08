@@ -109,6 +109,24 @@ def register(body: RegisterRequest, response: Response, conn: Db):
     _set_session_cookie(response, token)
     return {"user": auth.public_user(user)}
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+@app.post("/api/v1/auth/login")
+def login(body: LoginRequest, response: Response, conn: Db):
+    """Вход по email и паролю. Ставит cookie сессии."""
+    try:
+        user, token = auth.login(conn, body.email, body.password)
+    except auth.InvalidCredentials:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            {"message": "Неверный email или пароль"},
+        ) from None
+
+    _set_session_cookie(response, token)
+    return {"user": auth.public_user(user)}
 
 @app.get("/api/v1/auth/me")
 def me(
@@ -244,3 +262,19 @@ def update_game_audience_stats(payload: dict, conn: Db, _auth: InternalAuth):
 def publish_rankings(conn: Db, _auth: InternalAuth):
     refresh_rankings(conn)
     return {"message": "Рейтинг опубликован.", "rankingsRefreshed": True}
+
+
+@app.post("/api/v1/auth/logout")
+def logout(
+    conn: Db,
+    response: Response,
+    vtrende_session: Annotated[str | None, Cookie()] = None,
+):
+    """Удаляет сессию из базы и сбрасывает cookie."""
+    if vtrende_session:
+        conn.execute(
+            "DELETE FROM user_sessions WHERE token_hash = %s",
+            (auth._token_hash(vtrende_session),),
+        )
+    response.delete_cookie(auth.SESSION_COOKIE, path="/")
+    return {"message": "Выход выполнен."}

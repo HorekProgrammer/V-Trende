@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { apiPost } from '../api/client';
 import AuthCard from '../components/auth/AuthCard';
 import FormField from '../components/auth/FormField';
+import { Link } from 'react-router-dom';
 import { validateEmail, validatePassword } from '../utils/validation';
 import './AuthPage.css';
 
 export default function AuthPage() {
-  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
@@ -50,13 +49,12 @@ export default function AuthPage() {
         password: password,
       });
 
-      navigate('/');
+      window.location.assign('/');
     } catch (err) {
-      const message = err.message || 'Ошибка регистрации. Попробуйте позже.';
-      setServerError(message);
+      setServerError(err.message || 'Ошибка регистрации. Попробуйте позже.');
       
       if (err.fields) {
-        setErrors(err.fields);
+        setErrors({ email: '', password: '' });
       }
     } finally {
       setIsLoading(false);
@@ -67,7 +65,7 @@ export default function AuthPage() {
     <div className="auth-wrap">
       <AuthCard
         title="Создать аккаунт"
-        subtitle="Сохраняйте чарты и следите за трендами"
+        subtitle="Следите за трендами"
       >
         <form onSubmit={handleSubmit} noValidate>
           {serverError && (
@@ -104,7 +102,7 @@ export default function AuthPage() {
 
         <div className="auth-divider">или</div>
         <div className="auth-switch">
-          Уже есть аккаунт? <button type="button" className="auth-link">Войти</button>
+          Уже есть аккаунт? <Link to="/login" className="auth-link">Войти</Link>
         </div>
       </AuthCard>
     </div>
