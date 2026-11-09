@@ -40,7 +40,7 @@ class MigrationFilesTests(unittest.TestCase):
         migrations = discover()
         self.assertEqual(
             [m.version for m in migrations],
-            ["001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "011", "012", "013"],
+            ["001", "002", "003", "004", "005", "006", "007", "008", "009", "010", "011", "012", "013", "014"],
         )
         self.assertTrue(all(m.sql.strip() for m in migrations))
 
@@ -180,8 +180,14 @@ class RunAllFailureTests(unittest.TestCase):
         self.game_genres_patcher.start()
         self.game_covers_patcher = patch("parser.run_all.run_game_covers", return_value=0)
         self.game_covers_patcher.start()
+        self.movie_genres_patcher = patch("parser.run_all.run_movie_genres", return_value=0)
+        self.movie_genres_patcher.start()
+        self.streamer_genres_patcher = patch("parser.run_all.run_streamer_genres", return_value=0)
+        self.streamer_genres_patcher.start()
 
     def tearDown(self):
+        self.streamer_genres_patcher.stop()
+        self.movie_genres_patcher.stop()
         self.game_covers_patcher.stop()
         self.game_genres_patcher.stop()
         self.music_genres_patcher.stop()
@@ -230,6 +236,8 @@ class RunAllFailureTests(unittest.TestCase):
                 patch("parser.run_all.run_wordstat", return_value=0) as wordstat, \
                 patch("parser.run_all.run_music_genres", return_value=0) as music_genres, \
                 patch("parser.run_all.run_game_genres", return_value=0) as game_genres, \
+                patch("parser.run_all.run_movie_genres", return_value=0) as movie_genres, \
+                patch("parser.run_all.run_streamer_genres", return_value=0) as streamer_genres, \
                 redirect_stderr(io.StringIO()):
             self.assertEqual(
                 run_all.main(["--save", "--next-week", "--defer-publish"]),
@@ -242,6 +250,8 @@ class RunAllFailureTests(unittest.TestCase):
         wordstat.assert_called_once_with(target, publish=False)
         music_genres.assert_called_once_with(target)
         game_genres.assert_called_once_with(target)
+        movie_genres.assert_called_once_with(target)
+        streamer_genres.assert_called_once_with(target)
 
     def test_whatstat_failure_prevents_publication(self):
         with patch.dict(run_all.CHARTS, {}, clear=True), \

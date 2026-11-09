@@ -308,6 +308,8 @@ class RunAllTests(unittest.TestCase):
                 patch("parser.run_all.run_wordstat", return_value=0), \
                 patch("parser.run_all.run_music_genres", return_value=0), \
                 patch("parser.run_all.run_game_genres", return_value=0), \
+                patch("parser.run_all.run_movie_genres", return_value=0), \
+                patch("parser.run_all.run_streamer_genres", return_value=0), \
                 patch("parser.run_all.run_game_covers", return_value=0), redirect_stderr(err):
             code = run_all.main(["--save"])
         self.assertEqual(code, 1)
