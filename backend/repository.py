@@ -170,7 +170,7 @@ def category_trends(
 ) -> dict:
     order = {
         "popular": "rank",
-        "new": "first_seen_week DESC, rank",
+        "new": "weeks_in_top, rank",
         "rising": "rank_change DESC NULLS LAST, rank",
     }[sort]
     top_source, top_params = _top_source(week)
