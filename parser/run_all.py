@@ -80,6 +80,20 @@ def run_game_genres(week: date) -> int:
     return 0
 
 
+def run_movie_genres(week: date) -> int:
+    from parser.movie_genres import fill_movie_genres
+    saved, unknown = fill_movie_genres(week)
+    print(f"Жанры фильмов: сохранено {saved}, неизвестно {unknown}.", file=sys.stderr)
+    return 0
+
+
+def run_streamer_genres(week: date) -> int:
+    from parser.streamer_genres import fill_streamer_genres
+    saved, unknown = fill_streamer_genres(week)
+    print(f"Жанры стримеров: сохранено {saved}, неизвестно {unknown}.", file=sys.stderr)
+    return 0
+
+
 def run_game_covers() -> int:
     from parser.game_covers import fill_game_covers
     with connect() as conn:
@@ -190,6 +204,16 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"[game_genres] ОШИБКА: {error}", file=sys.stderr, flush=True)
             else:
                 print("[game_genres] OK", file=sys.stderr, flush=True)
+
+            for name, step in (("movie_genres", run_movie_genres), ("streamer_genres", run_streamer_genres)):
+                print(f"\n[{name}] запуск…", file=sys.stderr, flush=True)
+                try:
+                    step(target_week)
+                except Exception as error:  # noqa: BLE001 — ошибка обогащения должна попасть в итог планировщика
+                    genres_failed = True
+                    print(f"[{name}] ОШИБКА: {error}", file=sys.stderr, flush=True)
+                else:
+                    print(f"[{name}] OK", file=sys.stderr, flush=True)
 
             print("\n[game_covers] запуск…", file=sys.stderr, flush=True)
             try:

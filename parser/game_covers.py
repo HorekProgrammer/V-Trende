@@ -45,7 +45,7 @@ SELECT t.id, t.title,
         ORDER BY s.id LIMIT 1) AS steam_id
 FROM trends t
 WHERE t.category = 'games'
-  AND t.cover_source IS DISTINCT FROM %s
+  AND COALESCE(t.cover_source, '') NOT IN (%s, 'manual')
 ORDER BY t.id
 """
 
