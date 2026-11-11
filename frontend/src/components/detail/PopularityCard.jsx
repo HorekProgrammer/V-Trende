@@ -15,6 +15,7 @@ export default function PopularityCard({ history })
     .map((point) => ({
       weekStart: point.weekStart,
       value: point.rank,
+      dateLabel: formatWeek(point.weekStart),
       label: `${formatWeek(point.weekStart)}: #${point.rank}`,
     }));
   const points = period.points ? all.slice(-period.points) : all;
