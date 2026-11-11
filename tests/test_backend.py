@@ -39,6 +39,20 @@ class BackendMappingTests(unittest.TestCase):
         self.assertEqual(result["searchCount"], 1200)
         self.assertEqual(result["cover"], "https://avatars.yandex.net/cover.jpg")
         self.assertEqual(result["genres"], ["Поп", "Инди"])
+        self.assertFalse(result["isBack"])
+
+    def test_return_after_missing_week_is_marked_back(self):
+        record = {
+            "trend_id": 42, "category": "streamers", "week_start": date(2026, 11, 9),
+            "rank": 36, "score": 80, "source_score": 80, "wordstat_score": 80,
+            "prev_rank": None, "peak_rank": 36, "weeks_in_top": 2,
+            "title": "Daxak", "subtitle": None, "genre": "Игры", "genres": ["Игры"],
+            "is_new": False, "search_count": None, "cover_url": None,
+        }
+        result = card(record)
+        self.assertTrue(result["isBack"])
+        record["is_new"] = True
+        self.assertFalse(card(record)["isBack"])
 
 class BackendWeekSourceTests(unittest.TestCase):
     def test_latest_week_uses_existing_views(self):

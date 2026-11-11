@@ -66,6 +66,13 @@
   letter-spacing: .03em;
 }
 
+.detail-tag--back
+{
+  color: #b7aaff;
+  border-color: rgba(157, 140, 255, .55);
+  background: rgba(132, 108, 255, .14);
+}
+
 .detail-cover-btn 
 {
   padding: 0;

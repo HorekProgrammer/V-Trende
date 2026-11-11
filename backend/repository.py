@@ -83,6 +83,7 @@ def card(record: dict) -> dict:
         "genre": record["genre"],
         "genres": list(record.get("genres") or ([record["genre"]] if record["genre"] else [])),
         "isNew": record["is_new"],
+        "isBack": not record["is_new"] and record["prev_rank"] is None,
         "searchCount": record["search_count"],
         "cover": record["cover_url"],
     }
@@ -215,10 +216,22 @@ def trend_history(conn, trend_id: int) -> list[dict] | None:
     if exists is None:
         return None
     history = _rows(conn.execute(
-        """SELECT week_start, category_rank, score, source_score, wordstat_score, search_count
-           FROM v_trend_history
-           WHERE trend_id = %s
-           ORDER BY week_start""",
+        """WITH target AS (
+               SELECT id, category FROM trends WHERE id = %s
+           ), history AS (
+               SELECT h.* FROM v_trend_history h
+               JOIN target t ON t.id = h.trend_id
+           ), weeks AS (
+               SELECT DISTINCT r.week_start
+               FROM mv_category_rank r
+               JOIN target t ON t.category = r.category
+               WHERE r.week_start >= (SELECT MIN(week_start) FROM history)
+           )
+           SELECT w.week_start, h.category_rank, h.score, h.source_score,
+                  h.wordstat_score, h.search_count
+           FROM weeks w
+           LEFT JOIN history h ON h.week_start = w.week_start
+           ORDER BY w.week_start""",
         (trend_id,),
     ))
     return [
