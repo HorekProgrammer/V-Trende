@@ -84,13 +84,14 @@ class FillTests(unittest.TestCase):
         self.cache = Path(self.tmp.name) / "covers.json"
 
     def run_fill(self, conn, covers, **kwargs):
-        with patch.object(game_covers, "find_cover", side_effect=covers):
+        with patch.object(game_covers, "find_cover", side_effect=covers), \
+                patch.object(game_covers, "localize_image", return_value="/media/covers/square.jpg"):
             return fill_game_covers(conn, cache_path=self.cache, log=lambda *a: None, **kwargs)
 
     def test_found_saved_missing_cached(self):
         conn = FakeConn([{"id": 1, "title": "Rust"}, {"id": 2, "title": "FiveM"}])
         stats = self.run_fill(conn, [SQUARE, None])
-        self.assertEqual(conn.updates, [(SQUARE, "stopgame", 1)])
+        self.assertEqual(conn.updates, [("/media/covers/square.jpg", "stopgame", 1)])
         self.assertEqual((stats["found"], stats["missing"]), (1, 1))
         self.assertIn("2", json.loads(self.cache.read_text(encoding="utf-8")))
 
@@ -103,7 +104,7 @@ class FillTests(unittest.TestCase):
         conn = FakeConn([{"id": 1, "title": "A"}, {"id": 2, "title": "B"}])
         stats = self.run_fill(conn, [SQUARE])
         self.assertEqual(stats["checked"], 1)
-        self.assertEqual(conn.updates, [(SQUARE, "stopgame", 2)])
+        self.assertEqual(conn.updates, [("/media/covers/square.jpg", "stopgame", 2)])
 
     def test_network_errors_are_not_cached_and_stop_run(self):
         conn = FakeConn([{"id": i, "title": f"G{i}"} for i in range(5)])

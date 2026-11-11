@@ -18,6 +18,8 @@ from urllib.request import Request, urlopen
 
 from dotenv import dotenv_values
 
+from database.image_store import localize_payload_covers
+
 from .charts import CHARTS, Chart
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -172,6 +174,8 @@ def _write_outbox(payload: dict, outbox_dir: Path) -> str:
 
 def save_payload(payload: dict, *, timeout: float = 30, outbox_dir: Path | None = None) -> str:
     """Отправляет готовый пакет в бэкенд или, без BACKEND_URL, пишет в data/outbox/."""
+    if payload.get("type", "chart") == "chart" and payload.get("status") != "failed":
+        localize_payload_covers(payload, timeout=timeout)
     settings = _settings()
     backend_url = (settings.get("BACKEND_URL") or "").strip()
     if not backend_url:

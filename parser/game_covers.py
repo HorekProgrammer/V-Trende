@@ -11,6 +11,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from database.db import connect
+from database.image_store import ImageDownloadError, localize_image
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CACHE_PATH = PROJECT_ROOT / "data" / "stopgame_covers.json"
@@ -180,6 +181,12 @@ def fill_game_covers(conn, *, limit: int | None = None, recheck: bool = False,
         errors_in_row = 0
         stats["checked"] += 1
         if cover:
+            try:
+                cover = localize_image(cover)
+            except ImageDownloadError as error:
+                stats["errors"] += 1
+                log(f"  {game['title']}: не удалось сохранить обложку ({error})")
+                continue
             conn.execute(
                 "UPDATE trends SET cover_url = %s, cover_source = %s WHERE id = %s",
                 (cover, SOURCE, game["id"]),

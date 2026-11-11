@@ -1,18 +1,22 @@
 """FastAPI application serving trends and accepting parser payloads."""
 
 import hmac
+import re
 from datetime import date
 from typing import Annotated
 
 from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Query, Response, status
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from database.db import connect, settings
+from database.image_store import COVER_DIR
 from database.load_outbox import PayloadError, load_payload, refresh_rankings
 
 from . import auth, repository
 
+COVER_DIR.mkdir(parents=True, exist_ok=True)
 app = FastAPI(title="V-Trende API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
@@ -278,3 +282,13 @@ def logout(
         )
     response.delete_cookie(auth.SESSION_COOKIE, path="/")
     return {"message": "Выход выполнен."}
+
+
+@app.get("/media/covers/{filename}", include_in_schema=False)
+def local_cover(filename: str):
+    if not re.fullmatch(r"[0-9a-f]{64}\.(?:jpg|png|gif|webp|avif)", filename):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Обложка не найдена.")
+    path = COVER_DIR / filename
+    if not path.is_file():
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Обложка не найдена.")
+    return FileResponse(path, headers={"Cache-Control": "public, max-age=31536000, immutable"})
