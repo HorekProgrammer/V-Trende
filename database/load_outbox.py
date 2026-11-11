@@ -24,6 +24,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 from .db import PROJECT_ROOT, DatabaseConfigError, connect
+from .image_store import ImageDownloadError, localize_image
 from .manual_covers import manual_cover
 
 OUTBOX_DIR = PROJECT_ROOT / "data" / "outbox"
@@ -96,8 +97,8 @@ def _nonnegative_number(entry: dict, key: str, *, integer: bool = False) -> int 
 
 def _cover_url(entry: dict) -> str | None:
     url = _text(entry, "cover_url", required=False, max_length=2000)
-    if url is not None and not url.startswith("https://"):
-        raise PayloadError(f"Поле 'cover_url' должно быть https-ссылкой: {url!r}.")
+    if url is not None and not (url.startswith("https://") or url.startswith("/media/covers/")):
+        raise PayloadError(f"Поле 'cover_url' должно быть https-ссылкой или локальной обложкой: {url!r}.")
     return url
 
 
@@ -197,10 +198,15 @@ def _resolve_trend(conn, source: str, category: str, entry: dict) -> int:
 
     override_cover = manual_cover(category, entry["match_key"])
     if override_cover is not None:
-        conn.execute(
-            "UPDATE trends SET cover_url = %s, cover_source = 'manual' WHERE id = %s",
-            (override_cover, trend_id),
-        )
+        try:
+            local_override = localize_image(override_cover)
+        except ImageDownloadError:
+            local_override = None
+        if local_override is not None:
+            conn.execute(
+                "UPDATE trends SET cover_url = %s, cover_source = 'manual' WHERE id = %s",
+                (local_override, trend_id),
+            )
     elif entry["cover_url"] is not None:
         conn.execute(
             """UPDATE trends SET cover_url = %s, cover_source = %s

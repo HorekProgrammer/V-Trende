@@ -61,7 +61,7 @@ class BackendRouteTests(unittest.TestCase):
     def test_expected_routes_are_registered(self):
         from backend.app import app
 
-        routes = {(route.path, method) for route in app.routes for method in route.methods or []}
+        routes = {(route.path, method) for route in app.routes for method in getattr(route, "methods", None) or []}
         self.assertIn(("/api/v1/health", "GET"), routes)
         self.assertIn(("/api/v1/feed", "GET"), routes)
         self.assertIn(("/api/v1/weeks", "GET"), routes)
