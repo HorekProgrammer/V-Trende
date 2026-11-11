@@ -9,12 +9,18 @@ class MovieGenreTests(unittest.TestCase):
     def test_priority(self):
         self.assertEqual(movie_genres.classify_labels(["drama film", "science fiction film"]), "Фантастика")
         self.assertEqual(movie_genres.classify_labels(["action film", "thriller film"]), "Боевик")
-        self.assertEqual(movie_genres.classify_labels(["horror film", "comedy film"]), "Триллер")
+        self.assertEqual(movie_genres.classify_labels(["horror film", "comedy film"]), "Ужасы")
         self.assertEqual(movie_genres.classify_labels(["comedy-drama"]), "Комедия")
         self.assertEqual(movie_genres.classify_labels(["biographical film"]), "Драма")
-        self.assertEqual(movie_genres.classify_labels(["фильм ужасов"]), "Триллер")
+        self.assertEqual(movie_genres.classify_labels(["фильм ужасов"]), "Ужасы")
         self.assertEqual(movie_genres.classify_labels(["animated film", "family film"]), "Другое")
         self.assertIsNone(movie_genres.classify_labels([]))
+
+    def test_returns_up_to_three_ordered_genres(self):
+        self.assertEqual(
+            movie_genres.classify_genres(["фантастика", "боевик", "триллер", "драма"]),
+            ["Фантастика", "Боевик", "Триллер"],
+        )
 
     def test_deepseek_threshold(self):
         self.assertIsNone(movie_genres.accept_deepseek_genre({"genre": "Драма", "confidence": 0.79}))
@@ -108,7 +114,7 @@ class FillTests(unittest.TestCase):
         kinopoisk.return_value = {1: ["боевик"]}
         wikidata.side_effect = lambda film_id, timeout: ["comedy film"] if film_id == "22" else []
         self.assertEqual(movie_genres.fill_movie_genres(date(2026, 11, 2)), (2, 0))
-        save.assert_called_once_with({1: "Боевик", 2: "Комедия"})
+        save.assert_called_once_with({1: ["Боевик"], 2: ["Комедия"]})
         wikidata.assert_called_once()
 
 

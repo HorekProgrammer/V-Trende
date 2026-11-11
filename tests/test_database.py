@@ -109,17 +109,35 @@ class MigrationTests(DatabaseTestCase):
         self.conn.execute((MIGRATIONS_DIR / "001_init.sql").read_text(encoding="utf-8"))
         self.assertEqual(
             migrate(self.conn, baseline="001"),
-            ["002", "003", "004", "005", "006", "007", "008", "009", "010", "011", "012", "013", "014", "015"],
+            ["002", "003", "004", "005", "006", "007", "008", "009", "010", "011", "012", "013", "014", "015", "016", "017"],
         )
 
     def test_genres_are_seeded_and_category_is_enforced(self):
-        self.assertEqual(self.scalar("SELECT COUNT(*) FROM genres"), 22)
+        self.assertEqual(self.scalar("SELECT COUNT(*) FROM genres"), 23)
         self.load(build_payload("zvuk", tracks((1, 1)), week=W1))
         rock = self.scalar("SELECT id FROM genres WHERE category = 'music' AND name = 'Рок'")
         rpg = self.scalar("SELECT id FROM genres WHERE category = 'games' AND name = 'RPG'")
         self.conn.execute("UPDATE trends SET genre_id = %s", (rock,))
         with self.assertRaises(Exception):
             self.conn.execute("UPDATE trends SET genre_id = %s", (rpg,))
+
+    def test_multiple_genres_are_ordered_and_category_safe(self):
+        self.load(build_payload("zvuk", tracks((1, 1)), week=W1))
+        trend_id = self.scalar("SELECT id FROM trends")
+        pop = self.scalar("SELECT id FROM genres WHERE category = 'music' AND name = 'Поп'")
+        indie = self.scalar("SELECT id FROM genres WHERE category = 'music' AND name = 'Инди'")
+        rpg = self.scalar("SELECT id FROM genres WHERE category = 'games' AND name = 'RPG'")
+        self.conn.execute("UPDATE trends SET genre_id = %s WHERE id = %s", (pop, trend_id))
+        self.conn.execute(
+            "INSERT INTO trend_genres (trend_id, genre_id, category, position) VALUES (%s, %s, 'music', 2)",
+            (trend_id, indie),
+        )
+        self.assertEqual(self.scalar("SELECT trend_genre_names(%s)", (trend_id,)), ["Поп", "Инди"])
+        with self.assertRaises(Exception):
+            self.conn.execute(
+                "INSERT INTO trend_genres (trend_id, genre_id, category, position) VALUES (%s, %s, 'music', 3)",
+                (trend_id, rpg),
+            )
 
 
 class LoaderTests(DatabaseTestCase):

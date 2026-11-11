@@ -40,7 +40,9 @@ export default function DetailHero({ item, category })
           >
             {category.label}
           </span>
-          {item.genre && <span className="detail-tag">{item.genre}</span>}
+          {(item.genres?.length ? item.genres : [item.genre]).filter(Boolean).map((genre) => (
+            <span className="detail-tag" key={genre}>{genre}</span>
+          ))}
         </div>
         <h1 className="detail-title">{item.title}</h1>
         <div className="detail-sub">{item.subtitle}</div>

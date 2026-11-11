@@ -30,14 +30,15 @@ function CategoryView({ category }) {
 
   const genreOptions = useMemo(
     () =>
-      [...new Set(allItems.map((i) => i.genre).filter(Boolean))].sort((a, b) =>
+      [...new Set(allItems.flatMap((i) => i.genres?.length ? i.genres : [i.genre]).filter(Boolean))].sort((a, b) =>
         a.localeCompare(b, 'ru')
       ),
     [allItems]
   );
 
   const items = selectedGenres.length
-    ? allItems.filter((i) => selectedGenres.includes(i.genre))
+    ? allItems.filter((i) => (i.genres?.length ? i.genres : [i.genre])
+        .some((genre) => selectedGenres.includes(genre)))
     : allItems;
 
   const toggleGenre = (g) =>

@@ -11,7 +11,7 @@ CATEGORY_LABELS = {
 
 CARD_COLUMNS = """
     week_start, category, rank, score, source_score, wordstat_score,
-    trend_id, title, subtitle, genre,
+    trend_id, title, subtitle, genre, trend_genre_names(trend_id) AS genres,
     prev_rank, peak_rank, weeks_in_top, first_seen_week, is_new, search_count,
     cover_url
 """
@@ -81,6 +81,7 @@ def card(record: dict) -> dict:
         "title": record["title"],
         "subtitle": record["subtitle"] or "",
         "genre": record["genre"],
+        "genres": list(record.get("genres") or ([record["genre"]] if record["genre"] else [])),
         "isNew": record["is_new"],
         "searchCount": record["search_count"],
         "cover": record["cover_url"],
@@ -177,7 +178,7 @@ def category_trends(
     params: list[object] = [*top_params, category]
     genre_filter = ""
     if genres:
-        genre_filter = " AND genre = ANY(%s)"
+        genre_filter = " AND trend_genre_names(trend_id) && %s"
         params.append(genres)
     rows = _rows(conn.execute(
         f"""SELECT {CARD_COLUMNS} FROM {top_source}
