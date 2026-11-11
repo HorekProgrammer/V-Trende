@@ -12,6 +12,7 @@ import tempfile
 import unittest
 from datetime import date, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 from database.db import settings
 from parser.common import build_failure_payload, build_payload
@@ -172,14 +173,16 @@ class LoaderTests(DatabaseTestCase):
             "artists": ["Michael Jackson"],
             "cover_url": "https://example.com/wrong.jpg",
         }], week=W1)
-        self.load(payload)
+        local_cover = "/media/covers/manual-billie-jean.jpg"
+        with patch("database.load_outbox.localize_image", return_value=local_cover) as localized:
+            self.load(payload)
+        localized.assert_called_once_with(
+            "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/32/4f/fd/"
+            "324ffda2-9e51-8f6a-0c2d-c6fd2b41ac55/074643811224.jpg/600x600bb.jpg"
+        )
         self.assertEqual(
             self.rows("SELECT cover_url, cover_source FROM trends"),
-            [(
-                "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/32/4f/fd/"
-                "324ffda2-9e51-8f6a-0c2d-c6fd2b41ac55/074643811224.jpg/600x600bb.jpg",
-                "manual",
-            )],
+            [(local_cover, "manual")],
         )
 
     def test_external_id_links_steam_charts_and_title_links_epic(self):
