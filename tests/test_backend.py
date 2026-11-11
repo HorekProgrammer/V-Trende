@@ -23,6 +23,7 @@ class BackendMappingTests(unittest.TestCase):
             "title": "Песня",
             "subtitle": None,
             "genre": "Поп",
+            "genres": ["Поп", "Инди"],
             "is_new": False,
             "search_count": 1200,
             "cover_url": "https://avatars.yandex.net/cover.jpg",
@@ -37,6 +38,7 @@ class BackendMappingTests(unittest.TestCase):
         self.assertEqual(result["subtitle"], "")
         self.assertEqual(result["searchCount"], 1200)
         self.assertEqual(result["cover"], "https://avatars.yandex.net/cover.jpg")
+        self.assertEqual(result["genres"], ["Поп", "Инди"])
 
 class BackendWeekSourceTests(unittest.TestCase):
     def test_latest_week_uses_existing_views(self):

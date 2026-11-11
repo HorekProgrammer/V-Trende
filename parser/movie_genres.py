@@ -21,14 +21,15 @@ WIKIDATA_URL = "https://www.wikidata.org/w/api.php"
 KINOPOISK_PROPERTY = "P2603"
 GENRE_PROPERTY = "P136"
 MIN_CONFIDENCE = 0.80
-GENRES = ("Фантастика", "Боевик", "Триллер", "Комедия", "Драма", "Другое")
+GENRES = ("Фантастика", "Боевик", "Ужасы", "Триллер", "Комедия", "Драма", "Другое")
 
 RULES = (
     ("Фантастика", ("science fiction", "sci fi", "fantasy", "superhero", "cyberpunk", "space opera",
                     "фантаст", "фэнтези", "супергеро")),
     ("Боевик", ("action", "war film", "martial arts", "spy", "disaster", "боевик", "военн")),
-    ("Триллер", ("thriller", "horror", "crime", "mystery", "detective", "neo noir", "film noir",
-                 "триллер", "ужас", "криминал", "детектив")),
+    ("Ужасы", ("horror", "slasher", "supernatural horror", "body horror", "ужас", "хоррор")),
+    ("Триллер", ("thriller", "crime", "mystery", "detective", "neo noir", "film noir",
+                 "триллер", "криминал", "детектив")),
     ("Комедия", ("comedy", "parody", "satire", "комед", "пароди")),
     ("Драма", ("drama", "biographical", "romance", "romantic", "historical", "melodrama",
                "драма", "биограф", "мелодрам", "истори")),
@@ -67,14 +68,17 @@ def _norm(value: str) -> str:
 
 
 def classify_labels(labels: list[str]) -> str | None:
+    genres = classify_genres(labels, limit=1)
+    return genres[0] if genres else None
+
+
+def classify_genres(labels: list[str], *, limit: int = 3) -> list[str]:
     values = [_norm(label) for label in labels if isinstance(label, str) and label.strip()]
     if not values:
-        return None
+        return []
     joined = " | ".join(values)
-    for genre, tokens in RULES:
-        if any(token in joined for token in tokens):
-            return genre
-    return "Другое"
+    result = [genre for genre, tokens in RULES if any(token in joined for token in tokens)]
+    return (result or ["Другое"])[:limit]
 
 
 def accept_deepseek_genre(answer: dict) -> str | None:
@@ -205,14 +209,24 @@ Confidence is from 0 to 1. Return every id. Data: {json.dumps(supplied, ensure_a
     return result
 
 
-def _save_genres(genres: dict[int, str]) -> None:
+def _save_genres(genres: dict[int, list[str]]) -> None:
     if not genres:
         return
     with connect() as conn:
-        for trend_id, genre in genres.items():
+        for trend_id, names in genres.items():
+            names = list(dict.fromkeys(names))[:3]
+            if not names:
+                continue
             conn.execute("""UPDATE trends t SET genre_id = g.id FROM genres g
-                            WHERE t.id = %s AND t.genre_id IS NULL
-                              AND g.category = 'movies' AND g.name = %s""", (trend_id, genre))
+                            WHERE t.id = %s AND g.category = 'movies' AND g.name = %s""",
+                         (trend_id, names[0]))
+            conn.execute("DELETE FROM trend_genres WHERE trend_id = %s", (trend_id,))
+            for position, name in enumerate(names, 1):
+                conn.execute("""INSERT INTO trend_genres (trend_id, genre_id, category, position)
+                                SELECT %s, id, 'movies', %s FROM genres
+                                WHERE category = 'movies' AND name = %s""",
+                             (trend_id, position, name))
+            conn.execute("UPDATE trends SET genres_resolved_at = NOW() WHERE id = %s", (trend_id,))
         conn.commit()
 
 
@@ -223,7 +237,7 @@ def fill_movie_genres(week: date, *, timeout: float = 40) -> tuple[int, int]:
                    MAX(s.external_id) FILTER (WHERE s.source = 'kinopoisk') AS kinopoisk_id
                FROM mv_category_rank r JOIN trends t ON t.id = r.trend_id
                LEFT JOIN trend_source_items s ON s.trend_id = t.id
-               WHERE r.week_start = %s AND r.category = 'movies' AND t.genre_id IS NULL
+               WHERE r.week_start = %s AND r.category = 'movies' AND t.genres_resolved_at IS NULL
                GROUP BY r.rank, t.id, t.title, t.subtitle ORDER BY r.rank""", (week,)).fetchall()
         movies = [{"id": row[0], "title": row[1],
                    "year": row[2] if row[2] and str(row[2]).isdigit() else None,
@@ -233,11 +247,11 @@ def fill_movie_genres(week: date, *, timeout: float = 40) -> tuple[int, int]:
     genres, pending = {}, []
     from_kinopoisk = kinopoisk_genres(movies, timeout=timeout)
     for movie in movies:
-        genre = classify_labels(from_kinopoisk.get(movie["id"], []))
-        if not genre:
-            genre = classify_labels(wikidata_labels(movie["kinopoisk_id"], timeout=timeout))
-        if genre:
-            genres[movie["id"]] = genre
+        movie_genres = classify_genres(from_kinopoisk.get(movie["id"], []))
+        if not movie_genres:
+            movie_genres = classify_genres(wikidata_labels(movie["kinopoisk_id"], timeout=timeout))
+        if movie_genres:
+            genres[movie["id"]] = movie_genres
         else:
             pending.append(movie)
     _save_genres(genres)
@@ -250,7 +264,8 @@ def fill_movie_genres(week: date, *, timeout: float = 40) -> tuple[int, int]:
         model = str(settings.get("DEEPSEEK_MODEL") or "deepseek-flash")
         ai_genres = {}
         for start in range(0, len(pending), 10):
-            ai_genres.update(_deepseek_batch(pending[start:start + 10], api_key, model, timeout))
+            ai_genres.update({trend_id: [genre] for trend_id, genre in
+                              _deepseek_batch(pending[start:start + 10], api_key, model, timeout).items()})
         _save_genres(ai_genres)
         saved += len(ai_genres)
     return saved, len(movies) - saved
