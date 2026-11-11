@@ -5,18 +5,20 @@ import { PERIODS } from './periods';
 import { formatWeek } from '../../utils/dates';
 import './PopularityCard.css';
 
-export default function PopularityCard({ history }) 
+export default function PopularityCard({ history, topSize })
 {
   const [periodId, setPeriodId] = useState('12w');
   const period = PERIODS.find((p) => p.id === periodId);
 
   const all = history
-    .filter((point) => point.rank != null)
     .map((point) => ({
       weekStart: point.weekStart,
-      value: point.rank,
+      value: point.rank ?? topSize + 1,
+      isOutside: point.rank == null,
       dateLabel: formatWeek(point.weekStart),
-      label: `${formatWeek(point.weekStart)}: #${point.rank}`,
+      label: point.rank == null
+        ? `${formatWeek(point.weekStart)}: вне топ-${topSize}`
+        : `${formatWeek(point.weekStart)}: #${point.rank}`,
     }));
   const points = period.points ? all.slice(-period.points) : all;
 
@@ -31,7 +33,7 @@ export default function PopularityCard({ history })
         <div className="chart-empty">Пока нет данных для графика</div>
       ) : (
         <>
-          <PopularityChart points={points} />
+          <PopularityChart points={points} outsideValue={topSize + 1} topSize={topSize} />
           {points.length > 1 && (
             <div className="chart-foot">
               <span>{formatWeek(points[0].weekStart)}</span>

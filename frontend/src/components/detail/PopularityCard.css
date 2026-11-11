@@ -116,6 +116,19 @@
   stroke-width: 3;
 }
 
+.chart-dot.is-outside
+{
+  fill: var(--surface);
+  stroke: var(--text-faint);
+}
+
+.chart-dot.is-outside.is-active,
+.chart-dot.is-outside:focus
+{
+  fill: var(--text-dim);
+  stroke: #fff;
+}
+
 .chart-guide
 {
   stroke: rgba(255, 122, 41, .55);

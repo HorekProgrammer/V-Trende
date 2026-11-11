@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { W, H, PAD_L, PAD_R, PAD_T, INNER_H, chartTop, chartBottom, chartCoords, rankY, axisRanks } from './chartMath';
 
-export default function PopularityChart({ points }) 
+export default function PopularityChart({ points, outsideValue, topSize })
 {
   const [activeIndex, setActiveIndex] = useState(null);
   const values = points.map((p) => p.value);
@@ -38,7 +38,7 @@ export default function PopularityChart({ points })
       <div className="chart-axis">
         {ranks.map((r) => (
           <span key={r} style={{ top: rankY(r, top, bottom) }}>
-            #{r}
+            {r === outsideValue ? `${r}+` : `#${r}`}
           </span>
         ))}
       </div>
@@ -91,7 +91,7 @@ export default function PopularityChart({ points })
           {coords.map(([x, y], i) => (
             <circle
               key={points[i].weekStart}
-              className={i === activeIndex ? 'chart-dot is-active' : 'chart-dot'}
+              className={`chart-dot${points[i].isOutside ? ' is-outside' : ''}${i === activeIndex ? ' is-active' : ''}`}
               cx={x}
               cy={y}
               r={i === activeIndex ? 5.5 : 3.5}
@@ -111,7 +111,7 @@ export default function PopularityChart({ points })
             role="status"
           >
             <span>{activePoint.dateLabel}</span>
-            <strong>#{activePoint.value}</strong>
+            <strong>{activePoint.isOutside ? `вне топ-${topSize}` : `#${activePoint.value}`}</strong>
           </div>
         )}
       </div>

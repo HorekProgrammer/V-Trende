@@ -2,9 +2,10 @@ import './TrendCard.css';
 import Cover from '../common/Cover';
 
 
-function TrendBadge({ prevRank, rank, isNew }) 
+function TrendBadge({ prevRank, rank, isNew, isBack })
 {
   if (isNew) return <span className="trend-badge trend-new">NEW</span>;
+  if (isBack) return <span className="trend-badge trend-back">BACK</span>;
   if (prevRank == null) return <span className="trend-badge trend-flat">—</span>;
   const delta = prevRank - rank;
   if (delta > 0) return <span className="trend-badge trend-up">▲ {delta}</span>;
@@ -40,7 +41,7 @@ export default function TrendCard({ item, onClick, isMovie = false })
         <Stat label="Недель" value={item.weeks} />
       </div>
       <div className="row-trend">
-        <TrendBadge prevRank={item.prevRank} rank={item.rank} isNew={item.isNew} />
+        <TrendBadge prevRank={item.prevRank} rank={item.rank} isNew={item.isNew} isBack={item.isBack} />
       </div>
       <div className="row-arrow">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
