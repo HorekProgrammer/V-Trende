@@ -23,8 +23,8 @@ async function toApiError(res)
       message = body.detail.message;
       if (body.detail.fields && typeof body.detail.fields === 'object') fields = body.detail.fields;
     }
-  } catch 
-  {
+  } catch {
+    // Some error responses intentionally have no JSON body.
   }
   return new ApiError(res.status, message, fields);
 }
@@ -32,18 +32,6 @@ async function toApiError(res)
 export async function apiGet(path, signal) 
 {
   const res = await fetch(`${BASE}${path}`, { signal });
-  if (!res.ok) throw await toApiError(res);
-  return res.json();
-}
-
-export async function apiPost(path, data) 
-{
-  const res = await fetch(`${BASE}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(data),
-  });
   if (!res.ok) throw await toApiError(res);
   return res.json();
 }
