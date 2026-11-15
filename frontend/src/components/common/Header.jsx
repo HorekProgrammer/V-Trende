@@ -1,8 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../api/useAuth';
-import { apiPost } from '../../api/client';
-import { logoutPath } from '../../api/paths';
+import { Link, useLocation } from 'react-router-dom';
 import './Header.css';
 
 const CATEGORIES = [
@@ -14,8 +11,6 @@ const CATEGORIES = [
 
 export default function Header() {
   const { pathname } = useLocation();
-  const navigate = useNavigate();
-  const { isAuthenticated, loading } = useAuth();
   const activeCategory = pathname.startsWith('/category/') ? pathname.split('/')[2] : null;
 
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
@@ -35,16 +30,6 @@ export default function Header() {
       document.documentElement.dataset.theme = next;
       setTheme(next);
     });
-  };
-
-  const handleLogout = async () => {
-    try {
-      await apiPost(logoutPath(), {});
-    } catch (e) {
-      
-    }
-    
-    window.location.assign('/');
   };
 
   return (
@@ -74,17 +59,6 @@ export default function Header() {
         >
           {theme === 'dark' ? '\u2600\uFE0E' : '\u263E'}
         </button>
-        
-        
-        {!loading && (
-          isAuthenticated ? (
-            <button type="button" onClick={handleLogout} className="btn-primary">
-              Выйти
-            </button>
-          ) : (
-            <Link to="/login" className="btn-primary">Войти</Link>
-          )
-        )}
       </div>
     </header>
   );
