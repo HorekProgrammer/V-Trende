@@ -90,6 +90,27 @@ Total followers
 """
 
 
+def partial_weekly_markdown():
+    return """64
+
+Hours streamed
+
+4,951
+
+Average viewers
+
+10,201
+
+Peak viewers
+
+10,507
+
+Followers gained
+
+No streams for selected period
+"""
+
+
 def response(html):
     context = MagicMock()
     context.__enter__.return_value.read.return_value = html.encode()
@@ -181,6 +202,26 @@ class TwitchTests(unittest.TestCase):
             "followers_gained": -166,
             "followers_per_hour": -65.96,
             "total_followers": 2_304_573,
+        })
+
+    def test_derives_metrics_omitted_by_deepseek_fetch(self):
+        self.assertEqual(parse_weekly_stats_markdown(partial_weekly_markdown()), {
+            "hours_streamed": 64.0,
+            "average_viewers": 4951,
+            "peak_viewers": 10201,
+            "hours_watched": 316_864,
+            "followers_gained": 10507,
+            "followers_per_hour": 164.172,
+        })
+
+    def test_deepseek_page_with_no_weekly_metrics_is_inactive(self):
+        self.assertEqual(parse_weekly_stats_markdown("No streams for selected period"), {
+            "hours_streamed": 0.0,
+            "average_viewers": 0,
+            "peak_viewers": 0,
+            "hours_watched": 0,
+            "followers_gained": 0,
+            "followers_per_hour": 0.0,
         })
 
     def test_channel_without_streams_has_zero_weekly_statistics(self):

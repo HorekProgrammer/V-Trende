@@ -110,7 +110,7 @@ class MigrationTests(DatabaseTestCase):
         self.conn.execute((MIGRATIONS_DIR / "001_init.sql").read_text(encoding="utf-8"))
         self.assertEqual(
             migrate(self.conn, baseline="001"),
-            ["002", "003", "004", "005", "006", "007", "008", "009", "010", "011", "012", "013", "014", "015", "016", "017", "018", "019"],
+            ["002", "003", "004", "005", "006", "007", "008", "009", "010", "011", "012", "013", "014", "015", "016", "017", "018", "019", "020"],
         )
 
     def test_genres_are_seeded_and_category_is_enforced(self):
@@ -349,7 +349,7 @@ class RankingTests(DatabaseTestCase):
             {"category": "music", "match_key": key, "query": "q", "search_count": 10_000}]})
         self.refresh()
         feed = self.rows("SELECT feed_rank, title, search_count FROM v_main_feed ORDER BY feed_rank")
-        self.assertEqual(feed[0][1], "Трек 1")  # Wordstat весит 15% и не перекрывает лидерство в чартах
+        self.assertEqual(feed[0][1], "Трек 1")  # Wordstat весит 3% и не перекрывает лидерство в чартах
         trend = self.scalar("SELECT id FROM trends WHERE title = 'Трек 2'")
         history = self.rows("SELECT week_start, category_rank, search_count FROM v_trend_history "
                             "WHERE trend_id = %s ORDER BY week_start", (trend,))

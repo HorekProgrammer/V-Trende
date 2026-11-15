@@ -310,19 +310,46 @@ def _markdown_number(markdown: str, label: str) -> int | float:
 
 def parse_weekly_stats_markdown(markdown: str) -> dict:
     try:
-        return {
-            "hours_streamed": float(_markdown_number(markdown, "Hours streamed")),
-            "average_viewers": int(_markdown_number(markdown, "Average viewers")),
-            "peak_viewers": int(_markdown_number(markdown, "Peak viewers")),
-            "hours_watched": int(_markdown_number(markdown, "Hours watched")),
-            "followers_gained": int(_markdown_number(markdown, "Followers gained")),
-            "followers_per_hour": float(_markdown_number(markdown, "Followers / hour")),
-            "total_followers": int(_markdown_number(markdown, "Total followers")),
-        }
+        hours_streamed = float(_markdown_number(markdown, "Hours streamed"))
+        average_viewers = int(_markdown_number(markdown, "Average viewers"))
+        peak_viewers = int(_markdown_number(markdown, "Peak viewers"))
+        followers_gained = int(_markdown_number(markdown, "Followers gained"))
     except (TypeError, ValueError, OverflowError):
+        if "No streams for selected period" in markdown:
+            return {
+                "hours_streamed": 0.0,
+                "average_viewers": 0,
+                "peak_viewers": 0,
+                "hours_watched": 0,
+                "followers_gained": 0,
+                "followers_per_hour": 0.0,
+            }
         raise RuntimeError(
             "DeepSeek Fetch: weekly TwitchTracker channel statistics were not found."
         ) from None
+
+    try:
+        hours_watched = int(_markdown_number(markdown, "Hours watched"))
+    except (TypeError, ValueError, OverflowError):
+        hours_watched = round(hours_streamed * average_viewers)
+    try:
+        followers_per_hour = float(_markdown_number(markdown, "Followers / hour"))
+    except (TypeError, ValueError, OverflowError):
+        followers_per_hour = round(followers_gained / hours_streamed, 3) if hours_streamed else 0.0
+
+    result = {
+        "hours_streamed": hours_streamed,
+        "average_viewers": average_viewers,
+        "peak_viewers": peak_viewers,
+        "hours_watched": hours_watched,
+        "followers_gained": followers_gained,
+        "followers_per_hour": followers_per_hour,
+    }
+    try:
+        result["total_followers"] = int(_markdown_number(markdown, "Total followers"))
+    except (TypeError, ValueError, OverflowError):
+        pass
+    return result
 
 
 def _channel_bootstrap(html: str, slug: str) -> tuple[int, str]:
