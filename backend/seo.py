@@ -183,8 +183,10 @@ def trend_prerender(item: dict) -> str:
     subtitle = html.escape(str(item.get("subtitle", "")))
     category = html.escape(str(item.get("categoryLabel", "")))
     category_id = html.escape(str(item.get("sphere", "")), quote=True)
-    rank = html.escape(str(item.get("rank", "—")))
-    peak = html.escape(str(item.get("peak", "—")))
+    raw_rank = item.get("rank")
+    raw_peak = item.get("peak")
+    rank = "Вне чарта" if raw_rank is None else f"#{html.escape(str(raw_rank))}"
+    peak = "—" if raw_peak is None else f"#{html.escape(str(raw_peak))}"
     weeks = html.escape(str(item.get("weeks", "—")))
     history_rows = []
     for point in item.get("history", []):
@@ -205,8 +207,8 @@ def trend_prerender(item: dict) -> str:
         f'<p><a href="/category/{category_id}">{category}</a></p>'
         f"<h1>{title}</h1><p>{subtitle}</p>"
         '<dl class="seo-trend-stats">'
-        f"<dt>Текущая позиция</dt><dd>#{rank}</dd>"
-        f"<dt>Лучшее место</dt><dd>#{peak}</dd>"
+        f"<dt>Текущая позиция</dt><dd>{rank}</dd>"
+        f"<dt>Лучшее место</dt><dd>{peak}</dd>"
         f"<dt>Недель в рейтинге</dt><dd>{weeks}</dd>"
         "</dl>"
         f"{history}"
@@ -274,13 +276,17 @@ def category_html(index_html: str, category: str, label: str, ranking: dict) -> 
     )
 
 
-def trend_html(index_html: str, item: dict) -> str:
+def trend_html(index_html: str, item: dict, week=None) -> str:
     title = str(item.get("title", ""))
     subtitle = str(item.get("subtitle", "")).strip()
     category = str(item.get("categoryLabel", ""))
+    rank = item.get("rank")
+    rank_text = f"место #{rank}" if rank is not None else "вне чарта"
+    peak = item.get("peak")
+    peak_text = f"#{peak}" if peak is not None else "—"
     description = (
-        f"{title}: место #{item.get('rank', '—')} в рейтинге «{category}», "
-        f"лучшее место #{item.get('peak', '—')}, недель в рейтинге: {item.get('weeks', '—')}."
+        f"{title}: {rank_text} в рейтинге «{category}», "
+        f"лучшее место {peak_text}, недель в рейтинге: {item.get('weeks', '—')}."
     )
     trend_id = int(item["key"])
     return _page_html(
@@ -293,6 +299,8 @@ def trend_html(index_html: str, item: dict) -> str:
         ),
         description=description,
         canonical=f"{SITE_URL}/trend/{trend_id}",
-        initial_data={f"/trends/{trend_id}": item},
+        initial_data={
+            f"/trends/{trend_id}{f'?week={week.isoformat()}' if week else ''}": item
+        },
         image=item.get("cover"),
     )

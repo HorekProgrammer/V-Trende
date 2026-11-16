@@ -22,9 +22,22 @@
   color: var(--text);
 }
 
+.detail-week-switcher
+{
+  display: flex;
+  justify-content: flex-end;
+  margin: -56px 0 24px;
+}
+
 @media (max-width: 900px) 
 {
   .detail-wrap {
     padding: 20px 16px 70px;
+  }
+
+  .detail-week-switcher
+  {
+    justify-content: flex-start;
+    margin: 0 0 18px;
   }
 }

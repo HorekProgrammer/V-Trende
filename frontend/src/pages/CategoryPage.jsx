@@ -86,7 +86,12 @@ function CategoryView({ category }) {
                   key={item.key}
                   item={item}
                   isMovie={category.id === 'movies'}
-                  onClick={() => navigate(`/trend/${item.key}${week ? `?week=${week}` : ''}`)}
+                  onClick={() => {
+                    const params = new URLSearchParams();
+                    if (data?.weekStart) params.set('fromWeek', data.weekStart);
+                    const query = params.toString();
+                    navigate(`/trend/${item.key}${query ? `?${query}` : ''}`);
+                  }}
                 />
               ))}
             </DataState>

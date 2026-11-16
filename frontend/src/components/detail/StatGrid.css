@@ -36,9 +36,96 @@
 
 .stat-label 
 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 11.5px;
   color: var(--text-faint);
   margin-top: 5px;
+}
+
+.rating-info
+{
+  position: relative;
+  display: inline-flex;
+}
+
+.rating-info-button
+{
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-faint);
+  font: 700 10px/14px Arial, sans-serif;
+  text-align: center;
+  cursor: help;
+}
+
+.rating-info-button:hover,
+.rating-info-button:focus-visible
+{
+  color: var(--orange);
+  outline: none;
+}
+
+.rating-info-tooltip
+{
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + 9px);
+  left: 50%;
+  width: 440px;
+  max-width: min(440px, calc(100vw - 40px));
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 28%);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  transition: opacity .15s ease, transform .15s ease;
+}
+
+.rating-info-line
+{
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) minmax(0, 1.4fr);
+  gap: 12px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.rating-info-line > span
+{
+  color: var(--text-dim);
+}
+
+.rating-info-line strong
+{
+  font-weight: 700;
+  text-align: right;
+}
+
+.rating-info-formula
+{
+  display: block;
+  margin-top: 10px;
+  color: var(--text);
+}
+
+.rating-info:hover .rating-info-tooltip,
+.rating-info:focus-within .rating-info-tooltip
+{
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 @media (max-width: 900px) 
@@ -51,5 +138,30 @@
   .stat-num 
   {
     font-size: 18px;
+  }
+
+  .rating-info-tooltip
+  {
+    width: min(440px, calc(100vw - 40px));
+    left: auto;
+    right: -12px;
+    transform: translateY(4px);
+  }
+
+  .rating-info-line
+  {
+    grid-template-columns: 1fr;
+    gap: 1px;
+  }
+
+  .rating-info-line strong
+  {
+    text-align: left;
+  }
+
+  .rating-info:hover .rating-info-tooltip,
+  .rating-info:focus-within .rating-info-tooltip
+  {
+    transform: translateY(0);
   }
 }

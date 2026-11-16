@@ -183,12 +183,13 @@ def web_category(category: str, conn: Db):
 
 
 @app.get("/web/trend/{trend_id}", include_in_schema=False, response_class=HTMLResponse)
-def web_trend(trend_id: int, conn: Db):
-    item = repository.trend(conn, trend_id)
+def web_trend(trend_id: int, conn: Db, week: date | None = Query(None)):
+    require_week(conn, week)
+    item = repository.trend(conn, trend_id, week)
     if item is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Тренд не найден.")
     return HTMLResponse(
-        trend_html(load_frontend_index(), item),
+        trend_html(load_frontend_index(), item, week),
         headers={"Cache-Control": "no-cache"},
     )
 
@@ -260,8 +261,9 @@ def get_category_trends_legacy(
 
 
 @app.get("/api/v1/trends/{trend_id}")
-def get_trend(trend_id: int, conn: Db):
-    item = repository.trend(conn, trend_id)
+def get_trend(trend_id: int, conn: Db, week: date | None = Query(None)):
+    require_week(conn, week)
+    item = repository.trend(conn, trend_id, week)
     if item is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Тренд не найден.")
     return item

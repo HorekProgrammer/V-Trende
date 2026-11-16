@@ -9,6 +9,18 @@ CATEGORY_LABELS = {
     "streamers": "Стримеры",
 }
 
+SOURCE_LABELS = {
+    "yandex_music": "Яндекс Музыка",
+    "vk": "VK Музыка",
+    "zvuk": "Звук",
+    "apple_music": "Apple Music",
+    "shazam": "Shazam",
+    "kion": "KION Музыка",
+    "steam": "Steam",
+    "epic": "Epic Games",
+    "kinopoisk": "Кинопоиск",
+}
+
 CARD_COLUMNS = """
     week_start, category, rank, score, source_score, wordstat_score,
     trend_id, title, subtitle, genre, trend_genre_names(trend_id) AS genres,
@@ -213,19 +225,130 @@ def category_trends(
     }
 
 
-def trend(conn, trend_id: int) -> dict | None:
-    record = _row(conn.execute(
+def trend(conn, trend_id: int, week=None) -> dict | None:
+    latest_record = _row(conn.execute(
         f"""SELECT {CARD_COLUMNS} FROM v_category_top
             WHERE trend_id = %s
             ORDER BY week_start DESC
             LIMIT 1""",
         (trend_id,),
     ))
-    if record is None:
+    if latest_record is None:
         return None
+    history = trend_history(conn, trend_id) or []
+
+    if week is None:
+        record = latest_record
+    else:
+        selected_week = week.isoformat()
+        point_index = next(
+            (index for index, point in enumerate(history) if point["weekStart"] == selected_week),
+            None,
+        )
+        if point_index is None:
+            return None
+        point = history[point_index]
+        record = _row(conn.execute(
+            f"""SELECT {CARD_COLUMNS} FROM v_category_top
+                WHERE trend_id = %s AND week_start = %s
+                LIMIT 1""",
+            (trend_id, week),
+        ))
+        if record is None:
+            return None
+
     result = card(record)
-    result["history"] = trend_history(conn, trend_id) or []
+    result["scoreBreakdown"] = score_breakdown(conn, record)
+    result["history"] = history
     return result
+
+
+def score_breakdown(conn, record: dict) -> dict:
+    """Return the exact normalized inputs used for the selected weekly score."""
+    category = record["category"]
+    week_start = record["week_start"]
+    trend_id = record["trend_id"]
+
+    if category == "streamers":
+        row = _row(conn.execute(
+            """WITH weekly AS (
+                   SELECT s.*,
+                          PERCENT_RANK() OVER (ORDER BY hours_watched) AS hours_watched_score,
+                          PERCENT_RANK() OVER (ORDER BY average_viewers) AS average_viewers_score,
+                          PERCENT_RANK() OVER (ORDER BY peak_viewers) AS peak_viewers_score,
+                          PERCENT_RANK() OVER (ORDER BY followers_gained) AS followers_gained_score,
+                          PERCENT_RANK() OVER (ORDER BY followers_per_hour) AS followers_per_hour_score,
+                          PERCENT_RANK() OVER (ORDER BY hours_streamed) AS hours_streamed_score,
+                          PERCENT_RANK() OVER (ORDER BY total_followers) AS total_followers_score,
+                          RANK() OVER (ORDER BY hours_watched DESC) AS hours_watched_rank,
+                          RANK() OVER (ORDER BY average_viewers DESC) AS average_viewers_rank,
+                          RANK() OVER (ORDER BY peak_viewers DESC) AS peak_viewers_rank,
+                          RANK() OVER (ORDER BY followers_gained DESC) AS followers_gained_rank,
+                          RANK() OVER (ORDER BY followers_per_hour DESC) AS followers_per_hour_rank,
+                          RANK() OVER (ORDER BY hours_streamed DESC) AS hours_streamed_rank,
+                          RANK() OVER (ORDER BY total_followers DESC) AS total_followers_rank
+                   FROM twitch_weekly_stats s
+                   WHERE week_start = %s
+               )
+               SELECT * FROM weekly WHERE trend_id = %s""",
+            (week_start, trend_id),
+        ))
+        metrics = (
+            ("Часы просмотра", "hours_watched_score", "hours_watched_rank", 0.30),
+            ("Средние зрители", "average_viewers_score", "average_viewers_rank", 0.20),
+            ("Новые подписчики", "followers_gained_score", "followers_gained_rank", 0.20),
+            ("Пиковые зрители", "peak_viewers_score", "peak_viewers_rank", 0.10),
+            ("Подписчики за час", "followers_per_hour_score", "followers_per_hour_rank", 0.10),
+            ("Часы в эфире", "hours_streamed_score", "hours_streamed_rank", 0.05),
+            ("Всего подписчиков", "total_followers_score", "total_followers_rank", 0.05),
+        )
+        return {
+            "kind": "streamers",
+            "components": [
+                {
+                    "label": label,
+                    "position": row[rank_column],
+                    "value": round(float(row[score_column]) * 100, 2),
+                    "weight": weight,
+                }
+                for label, score_column, rank_column, weight in metrics
+            ] if row else [],
+        }
+
+    rows = _rows(conn.execute(
+        """WITH positions AS (
+               SELECT e.*,
+                      MAX(e.position) OVER (PARTITION BY e.chart_id, e.week_start) AS chart_size,
+                      COALESCE(w.weight, 1.0) AS chart_weight
+               FROM v_chart_entries e
+               LEFT JOIN chart_weights w ON w.source = e.source AND w.name = e.chart_name
+               WHERE e.week_start = %s
+           )
+           SELECT source, chart_name, position, chart_weight,
+                  CASE WHEN chart_size <= 1 THEN 100.0
+                       ELSE (1.0 - (position - 1)::NUMERIC / (chart_size - 1)) * 100
+                  END AS normalized_score
+           FROM positions
+           WHERE trend_id = %s
+           ORDER BY chart_weight DESC, source, chart_name""",
+        (week_start, trend_id),
+    ))
+    return {
+        "kind": category,
+        "components": [
+            {
+                "label": (
+                    SOURCE_LABELS.get(row["source"], row["source"])
+                    if category == "music"
+                    else f"{SOURCE_LABELS.get(row['source'], row['source'])} — {row['chart_name']}"
+                ),
+                "position": row["position"],
+                "value": round(float(row["normalized_score"]), 2),
+                "weight": float(row["chart_weight"]),
+            }
+            for row in rows
+        ],
+    }
 
 
 def trend_history(conn, trend_id: int) -> list[dict] | None:
@@ -242,7 +365,9 @@ def trend_history(conn, trend_id: int) -> list[dict] | None:
                SELECT DISTINCT r.week_start
                FROM mv_category_rank r
                JOIN target t ON t.category = r.category
-               WHERE r.week_start >= (SELECT MIN(week_start) FROM history)
+               WHERE r.week_start >= (
+                   SELECT MIN(week_start) FROM history WHERE category_rank IS NOT NULL
+               )
            )
            SELECT w.week_start, h.category_rank, h.score, h.source_score,
                   h.wordstat_score, h.search_count
