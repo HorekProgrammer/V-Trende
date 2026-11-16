@@ -21,7 +21,15 @@ function CategoryView({ category }) {
   const [sort, setSort] = useState('popular');
   const [selectedGenres, setSelectedGenres] = useState([]);
 
-  useEffect(() => {document.title = `${category.label} • В Чарте`}, [category.label]);
+  useEffect(() => {
+    const titles = {
+      music: 'Популярная музыка — рейтинг недели | В ЧАРТЕ',
+      movies: 'Популярные фильмы — рейтинг недели | В ЧАРТЕ',
+      games: 'Популярные игры — рейтинг недели | В ЧАРТЕ',
+      streamers: 'Популярные стримеры — рейтинг недели | В ЧАРТЕ',
+    };
+    document.title = titles[category.id];
+  }, [category.id]);
   const [week, setWeek] = useWeek();
   const { data: weeks } = useApi(weeksPath());
   const { data, loading, error } = useApi(categoryTrendsPath(category.id, sort, week));

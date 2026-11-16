@@ -34,7 +34,9 @@ export default function HomePage()
     });
   };
 
-  useEffect(() => {document.title = 'Главная страница • В Чарте'}, []);
+  useEffect(() => {
+    document.title = 'Актуальные рейтинги музыки, фильмов, игр и стримеров | В ЧАРТЕ';
+  }, []);
 
   useEffect(() =>
   {
@@ -77,7 +79,7 @@ export default function HomePage()
                 <GroupBlock
                   id="group-new"
                   title="Новые релизы"
-                  description="Только появились в чартах — меньше всего недель в топе."
+                  description="Только появились в чартах"
                   items={data.new}
                   onItemClick={openTrend}
                   variant="grid"
@@ -88,7 +90,7 @@ export default function HomePage()
                 <GroupBlock
                   id="group-legendary"
                   title="Легендарное"
-                  description="Держится в чартах дольше всех — проверено временем."
+                  description="Держится в чартах дольше всех"
                   items={data.legendary}
                   onItemClick={openTrend}
                   variant="legend"

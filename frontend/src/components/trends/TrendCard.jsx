@@ -28,7 +28,15 @@ export default function TrendCard({ item, onClick, isMovie = false })
     const medal = item.rank >= 1 && item.rank <= 3 ? ` rank-${item.rank}` : '';
 
   return (
-    <div className={`row-card${medal}`} onClick={onClick}>
+    <a
+      className={`row-card${medal}`}
+      href={`/trend/${item.key}`}
+      onClick={(event) => {
+        if (!onClick || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        onClick();
+      }}
+    >
       <div className="row-rank">{item.rank}</div>
       <Cover item={item} className="row-cover" adaptive squareCrop={isMovie} />
       <div className="row-info">
@@ -54,6 +62,6 @@ export default function TrendCard({ item, onClick, isMovie = false })
           />
         </svg>
       </div>
-    </div>
+    </a>
   );
 }

@@ -15,10 +15,15 @@ export default function Top3Block({id, title, description, groups, onItemClick }
           <div className="top3-col" key={category.id}>
             <div className="top3-col-head">{category.label}</div>
             {items.map((item) => (
-              <div
+              <a
                 className="top3-item"
                 key={item.key}
-                onClick={() => onItemClick?.(item)}
+                href={`/trend/${item.key}`}
+                onClick={(event) => {
+                  if (!onItemClick || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                  event.preventDefault();
+                  onItemClick(item);
+                }}
               >
                 <div className="top3-rank">{item.rank}</div>
                 <Cover item={item} className="top3-cover" />
@@ -26,7 +31,7 @@ export default function Top3Block({id, title, description, groups, onItemClick }
                   <div className="top3-title">{item.title}</div>
                   <div className="top3-sub">{item.subtitle}</div>
                 </div>
-              </div>
+              </a>
             ))}
           </div>
         ))}

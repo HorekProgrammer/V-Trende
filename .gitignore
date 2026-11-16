@@ -4,11 +4,14 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
+.tmp-*-seo/
 .env
 .env.*
 !.env.example
 *.log
 *.dump
+seo-audit-*.json
 data/
 cookie.txt
+server.txt
 vk.txt

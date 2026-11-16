@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { apiGet } from './client';
+import { apiFailureResult, initialApiResult } from './initialData';
 
 
 export function useApi(path) 
 {
-  const [result, setResult] = useState({ path: null, data: null, error: null });
+  const [result, setResult] = useState(() => {
+    return initialApiResult(path, window.__VCHARTE_INITIAL_DATA__);
+  });
 
   useEffect(() => {
     if (!path) return undefined;
@@ -14,7 +17,12 @@ export function useApi(path)
       .then((data) => setResult({ path, data, error: null }))
       .catch((error) => {
         if (error.name === 'AbortError') return;
-        setResult({ path, data: null, error });
+        setResult((current) => {
+          // The home snapshot was generated from the same live feed as this
+          // request. Keep it visible if the repeated API request temporarily
+          // fails for a crawler or a regular user.
+          return apiFailureResult(current, path, error);
+        });
       });
 
     return () => controller.abort();

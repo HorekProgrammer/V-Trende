@@ -4,10 +4,12 @@ import HomePage from './pages/HomePage';
 import CategoryPage from './pages/CategoryPage';
 import DetailPage from './pages/DetailPage';
 import EmberBackground from './components/common/EmberBackground';
+import YandexMetrika from './analytics/YandexMetrika';
 
 function App() {
   return (
     <BrowserRouter>
+      <YandexMetrika />
       <EmberBackground />
       <Header />
       <Routes>
