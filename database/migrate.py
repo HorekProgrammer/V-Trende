@@ -129,7 +129,7 @@ def status(conn, directory: Path = MIGRATIONS_DIR) -> list[tuple[str, str, bool]
 
 
 def main(argv: list[str] | None = None) -> int:
-    cli = argparse.ArgumentParser(description="Миграции базы данных «В-Тренде»")
+    cli = argparse.ArgumentParser(description="Миграции базы данных «В Чарте»")
     cli.add_argument("--status", action="store_true", help="Показать состояние миграций")
     cli.add_argument("--target", help="Применить миграции до этого номера включительно")
     cli.add_argument("--baseline", help="Отметить миграции до этого номера применёнными без выполнения")

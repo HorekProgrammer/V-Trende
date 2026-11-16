@@ -1,7 +1,7 @@
 """Подключение к PostgreSQL.
 
 Адрес базы берётся из переменной DATABASE_URL (.env или окружение), например:
-    DATABASE_URL=postgresql://postgres:password@localhost:5432/vtrende
+    DATABASE_URL=postgresql://postgres:password@localhost:5432/vcharte
 """
 
 import os

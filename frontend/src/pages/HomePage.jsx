@@ -34,7 +34,7 @@ export default function HomePage()
     });
   };
 
-  useEffect(() => {document.title = 'Главная Страница • В-Тренде'}, []);
+  useEffect(() => {document.title = 'Главная страница • В Чарте'}, []);
 
   useEffect(() =>
   {

@@ -51,7 +51,7 @@ def localize_image(url: str | None, *, timeout: float = 25) -> str | None:
         return PUBLIC_PREFIX + cached.name
 
     request = Request(url, headers={
-        "User-Agent": "V-Trende/1.0 (+https://github.com/HorekProgrammer/V-Trende)",
+        "User-Agent": "V-Charte/1.0",
         "Accept": "image/avif,image/webp,image/png,image/jpeg,image/gif;q=0.8,*/*;q=0.1",
     })
     try:

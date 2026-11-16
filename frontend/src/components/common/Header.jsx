@@ -35,7 +35,7 @@ export default function Header() {
   return (
     <header className="topbar">
       <Link to="/" className="logo">
-        <div className="logo-word">В <span>ТРЕНДЕ</span></div>
+        <div className="logo-word">В <span>ЧАРТЕ</span></div>
       </Link>
 
       <nav className="nav-spheres">

@@ -21,7 +21,7 @@ function CategoryView({ category }) {
   const [sort, setSort] = useState('popular');
   const [selectedGenres, setSelectedGenres] = useState([]);
 
-  useEffect(() => {document.title = `${category.label} • В-Тренде`}, [category.label]); 
+  useEffect(() => {document.title = `${category.label} • В Чарте`}, [category.label]);
   const [week, setWeek] = useWeek();
   const { data: weeks } = useApi(weeksPath());
   const { data, loading, error } = useApi(categoryTrendsPath(category.id, sort, week));

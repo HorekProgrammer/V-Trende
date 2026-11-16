@@ -80,7 +80,7 @@ def _parse_api_response(body: bytes) -> list[dict]:
 def _fetch_chart(timeout: float) -> list[dict]:
     request = Request(CHART_API_URL, headers={
         "Accept": "application/json",
-        "User-Agent": "V-Trende/1.0",
+        "User-Agent": "V-Charte/1.0",
     })
     try:
         with urlopen(request, timeout=timeout) as response:

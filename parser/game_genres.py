@@ -77,7 +77,7 @@ def accept_deepseek_genre(answer: dict) -> str | None:
 
 def _get(url: str, timeout: float, *, pause: float = 0.0) -> bytes:
     request = Request(url, headers={
-        "User-Agent": "V-Trende/1.0 (game metadata)",
+        "User-Agent": "V-Charte/1.0 (game metadata)",
         "Cookie": "birthtime=0; lastagecheckage=1-January-1970; mature_content=1",
     })
     for attempt in range(6):

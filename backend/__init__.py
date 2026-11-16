@@ -1,1 +1,1 @@
-"""HTTP API for V-Trende."""
+"""HTTP API for «В Чарте»."""

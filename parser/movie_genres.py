@@ -92,7 +92,7 @@ def accept_deepseek_genre(answer: dict) -> str | None:
 
 def _wikidata(params: dict, timeout: float) -> dict:
     url = f"{WIKIDATA_URL}?{urlencode({'format': 'json', **params})}"
-    request = Request(url, headers={"User-Agent": "V-Trende/1.0 (movie metadata)"})
+    request = Request(url, headers={"User-Agent": "V-Charte/1.0 (movie metadata)"})
     for attempt in range(4):
         try:
             with urlopen(request, timeout=timeout) as response:

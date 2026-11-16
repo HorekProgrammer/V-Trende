@@ -38,7 +38,7 @@ export default function DetailPage() {
 
   useEffect(() => {
     if (item) {
-      document.title = `${item.title} • В-Тренде`;
+      document.title = `${item.title} • В Чарте`;
     }
   }, [item]);
 
