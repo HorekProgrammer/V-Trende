@@ -34,7 +34,9 @@ export default function HomePage()
     });
   };
 
-  useEffect(() => {document.title = 'Главная страница • В Чарте'}, []);
+  useEffect(() => {
+    document.title = 'Актуальные рейтинги музыки, фильмов, игр и стримеров | В ЧАРТЕ';
+  }, []);
 
   useEffect(() =>
   {

@@ -38,7 +38,9 @@ export default function DetailPage() {
 
   useEffect(() => {
     if (item) {
-      document.title = `${item.title} • В Чарте`;
+      document.title = item.subtitle
+        ? `${item.title} — ${item.subtitle} — популярность и история | В ЧАРТЕ`
+        : `${item.title} — популярность, место в рейтинге и история | В ЧАРТЕ`;
     }
   }, [item]);
 

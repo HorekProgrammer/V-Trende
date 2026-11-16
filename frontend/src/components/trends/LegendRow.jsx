@@ -7,7 +7,15 @@ export default function LegendRow({ item, maxWeeks, onClick })
   const percent = Math.round((item.weeks / maxWeeks) * 100);
 
   return (
-    <div className="legend-row" onClick={onClick}>
+    <a
+      className="legend-row"
+      href={`/trend/${item.key}`}
+      onClick={(event) => {
+        if (!onClick || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        onClick();
+      }}
+    >
       <Cover item={item} className="legend-cover" />
       <div className="legend-info">
         <div className="legend-title">{item.title}</div>
@@ -22,6 +30,6 @@ export default function LegendRow({ item, maxWeeks, onClick })
         </div>
       </div>
       <div className="legend-weeks">{item.weeks} нед. в топе</div>
-    </div>
+    </a>
   );
 }

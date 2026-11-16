@@ -161,6 +161,23 @@ def main_trends(conn, limit: int, offset: int, week=None) -> dict:
     return {"items": [card(row) for row in rows], "limit": limit, "offset": offset}
 
 
+def sitemap_trend_ids(conn) -> list[int]:
+    """Trend pages that exist in at least one published weekly ranking."""
+    return [
+        row[0]
+        for row in conn.execute(
+            "SELECT DISTINCT trend_id FROM mv_category_rank ORDER BY trend_id"
+        ).fetchall()
+    ]
+
+
+def published_trend_exists(conn, trend_id: int) -> bool:
+    return conn.execute(
+        "SELECT 1 FROM v_category_top WHERE trend_id = %s LIMIT 1",
+        (trend_id,),
+    ).fetchone() is not None
+
+
 def category_trends(
     conn,
     category: str,

@@ -6,7 +6,7 @@ from datetime import date
 from typing import Annotated
 
 from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Query, Response, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -15,6 +15,7 @@ from database.image_store import COVER_DIR
 from database.load_outbox import PayloadError, load_payload, refresh_rankings
 
 from . import auth, repository
+from .seo import category_html, load_frontend_index, sitemap_xml, spa_html, trend_html
 
 COVER_DIR.mkdir(parents=True, exist_ok=True)
 app = FastAPI(title="В Чарте API", version="1.0.0")
@@ -147,6 +148,49 @@ def me(
 @app.get("/api/v1/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/sitemap.xml", include_in_schema=False)
+def sitemap(conn: Db):
+    content = sitemap_xml(repository.sitemap_trend_ids(conn))
+    return Response(content=content, media_type="application/xml")
+
+
+@app.get("/web/home", include_in_schema=False, response_class=HTMLResponse)
+def web_home(conn: Db):
+    return HTMLResponse(
+        spa_html(load_frontend_index(), repository.feed(conn)),
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+@app.get("/web/category/{category}", include_in_schema=False, response_class=HTMLResponse)
+def web_category(category: str, conn: Db):
+    if category not in repository.CATEGORY_LABELS:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Категория не найдена.")
+    ranking = repository.category_trends(
+        conn, category, "popular", [], limit=100, offset=0
+    )
+    return HTMLResponse(
+        category_html(
+            load_frontend_index(),
+            category,
+            repository.CATEGORY_LABELS[category],
+            ranking,
+        ),
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
+@app.get("/web/trend/{trend_id}", include_in_schema=False, response_class=HTMLResponse)
+def web_trend(trend_id: int, conn: Db):
+    item = repository.trend(conn, trend_id)
+    if item is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Тренд не найден.")
+    return HTMLResponse(
+        trend_html(load_frontend_index(), item),
+        headers={"Cache-Control": "no-cache"},
+    )
 
 
 def require_week(conn, week: date | None) -> None:
