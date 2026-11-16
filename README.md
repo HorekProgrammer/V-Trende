@@ -80,7 +80,7 @@ Circuit Breaker позволяет избежать бесконечных по�
 graph TB
     User("Пользователь<br/> [Person]")
 
-    System{{"В-Тренде<br/>[Software System]<br/>Веб-сервис для сбора<br/>и отображения трендов"}}
+    System{{"В Чарте<br/>[Software System]<br/>Веб-сервис для сбора<br/>и отображения трендов"}}
 
     Wordstat["API Вордстат<br/>[Software System]<br/>Аналитика поисковых<br/>запросов"]
 
@@ -116,7 +116,7 @@ graph TB
 graph LR
     User("Пользователь<br/>[Person]")
 
-    subgraph VTrende["В-Тренде"]
+    subgraph VCharte["В Чарте"]
         Frontend["Frontend<br/>[Container: JavaScript + React]<br/>Веб-интерфейс"]
 
         Parser["Parser / Worker<br/>[Container: Python + Playwright]<br/>Автономный скрипт еженедельного сбора данных"]
@@ -144,7 +144,7 @@ graph LR
     style Parser fill:none,stroke:#A100FF,stroke-width:3px
     style DB fill:none,stroke:#A100FF,stroke-width:3px
     style External fill:none,stroke:#2757F5,stroke-width:3px
-    style VTrende fill:none,stroke:#A100FF,stroke-width:2px
+    style VCharte fill:none,stroke:#A100FF,stroke-width:2px
 
 ```
 

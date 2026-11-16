@@ -1,6 +1,6 @@
 # База данных
 
-PostgreSQL 16. Адрес задаётся в `.env`: `DATABASE_URL=postgresql://user:password@localhost:5432/vtrende`.
+PostgreSQL 16. Адрес задаётся в `.env`: `DATABASE_URL=postgresql://user:password@localhost:5432/vcharte`.
 
 ## Первый запуск
 

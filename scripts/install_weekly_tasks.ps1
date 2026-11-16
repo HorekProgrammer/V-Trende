@@ -48,15 +48,15 @@ $backendSettings = New-ScheduledTaskSettingsSet `
     -ExecutionTimeLimit ([TimeSpan]::Zero)
 
 Register-ScheduledTask `
-    -TaskName "V-Trende Backend" `
-    -Description "Start the local V-Trende API when the user logs on" `
+    -TaskName "В Чарте Backend" `
+    -Description "Start the local В Чарте API when the user logs on" `
     -Action $backendAction `
     -Trigger $backendTrigger `
     -Settings $backendSettings `
     -Force | Out-Null
 
 Register-ScheduledTask `
-    -TaskName "V-Trende Prepare Weekly Data" `
+    -TaskName "В Чарте Prepare Weekly Data" `
     -Description "Sunday 22:00 MSK: collect parsers and Wordstat without publishing" `
     -Action $prepareAction `
     -Trigger $prepareTrigger `
@@ -64,12 +64,12 @@ Register-ScheduledTask `
     -Force | Out-Null
 
 Register-ScheduledTask `
-    -TaskName "V-Trende Publish Weekly Rating" `
+    -TaskName "В Чарте Publish Weekly Rating" `
     -Description "Monday 00:00 MSK: publish the prepared weekly rating" `
     -Action $publishAction `
     -Trigger $publishTrigger `
     -Settings $publishSettings `
     -Force | Out-Null
 
-Get-ScheduledTask -TaskName "V-Trende Backend", "V-Trende Prepare Weekly Data", "V-Trende Publish Weekly Rating" |
+Get-ScheduledTask -TaskName "В Чарте Backend", "В Чарте Prepare Weekly Data", "В Чарте Publish Weekly Rating" |
     Select-Object TaskName, State

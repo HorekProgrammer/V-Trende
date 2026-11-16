@@ -1,7 +1,7 @@
 """Тесты на настоящей PostgreSQL: миграции, загрузчик, представления.
 
 Запускаются, только если задан TEST_DATABASE_URL, например:
-    TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/vtrende_test
+    TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/vcharte_test
 
 ВНИМАНИЕ: перед каждым тестом схема public этой базы удаляется целиком.
 Никогда не указывайте здесь рабочую базу.

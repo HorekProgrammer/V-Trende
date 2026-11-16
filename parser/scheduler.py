@@ -54,7 +54,7 @@ def _execute(action: str) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    cli = argparse.ArgumentParser(description="Плановые задания В-Тренде")
+    cli = argparse.ArgumentParser(description="Плановые задания «В Чарте»")
     cli.add_argument("action", choices=("prepare", "publish"))
     args = cli.parse_args(argv)
 

@@ -85,7 +85,7 @@ def chart_states(week: date) -> dict[str, tuple[str, str | None]]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    cli = argparse.ArgumentParser(description="Статус последнего планового сбора В-Тренде")
+    cli = argparse.ArgumentParser(description="Статус последнего планового сбора «В Чарте»")
     cli.add_argument("--week", type=date.fromisoformat, help="целевая неделя YYYY-MM-DD")
     args = cli.parse_args(argv)
 

@@ -62,7 +62,7 @@ def normalize_apple_genre(value: str) -> str | None:
 
 
 def _get_json(url: str, timeout: float) -> dict:
-    request = Request(url, headers={"User-Agent": "V-Trende/1.0", "Accept": "application/json"})
+    request = Request(url, headers={"User-Agent": "V-Charte/1.0", "Accept": "application/json"})
     for attempt in range(5):
         try:
             with urlopen(request, timeout=timeout) as response:

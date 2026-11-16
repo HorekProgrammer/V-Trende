@@ -59,7 +59,7 @@ def _check_whatstat() -> str:
 def _check_wordstat() -> str:
     from parser.wordstat import get_wordstat_count
 
-    count = get_wordstat_count("В тренде")
+    count = get_wordstat_count("В чарте")
     if type(count) is not int or count < 0:
         raise RuntimeError("API returned an invalid count")
     return f"authorization and response structure OK, count: {count}"
@@ -67,7 +67,7 @@ def _check_wordstat() -> str:
 
 def main(argv: list[str] | None = None) -> int:
     # Health checks must not open or reset production circuit breakers.
-    temporary = tempfile.TemporaryDirectory(prefix="v-trende-healthcheck-")
+    temporary = tempfile.TemporaryDirectory(prefix="v-charte-healthcheck-")
     previous_state_file = os.environ.get("CIRCUIT_BREAKER_STATE_FILE")
     os.environ["CIRCUIT_BREAKER_STATE_FILE"] = os.path.join(temporary.name, "circuits.json")
 

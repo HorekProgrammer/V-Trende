@@ -89,7 +89,7 @@ def parse_categories(html: str) -> list[dict]:
 def _fetch_page(page: int, timeout: float) -> str:
     url = BASE_URL if page == 1 else f"{BASE_URL}?page={page}"
     request = Request(url, headers={
-        "User-Agent": "Mozilla/5.0 (compatible; V-Trende/1.0)",
+        "User-Agent": "Mozilla/5.0 (compatible; V-Charte/1.0)",
         "Accept-Language": "ru-RU,ru;q=0.9",
     })
     try:

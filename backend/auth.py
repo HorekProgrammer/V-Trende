@@ -26,7 +26,7 @@ SCRYPT_P = 1
 SCRYPT_DKLEN = 32
 SALT_BYTES = 16
 
-SESSION_COOKIE = "vtrende_session"
+SESSION_COOKIE = "vcharte_session"
 SESSION_TTL = timedelta(days=30)
 
 

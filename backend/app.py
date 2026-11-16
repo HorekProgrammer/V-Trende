@@ -17,7 +17,7 @@ from database.load_outbox import PayloadError, load_payload, refresh_rankings
 from . import auth, repository
 
 COVER_DIR.mkdir(parents=True, exist_ok=True)
-app = FastAPI(title="V-Trende API", version="1.0.0")
+app = FastAPI(title="В Чарте API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -135,10 +135,10 @@ def login(body: LoginRequest, response: Response, conn: Db):
 @app.get("/api/v1/auth/me")
 def me(
     conn: Db,
-    vtrende_session: Annotated[str | None, Cookie()] = None,
+    vcharte_session: Annotated[str | None, Cookie()] = None,
 ):
     """Текущий пользователь по cookie сессии; 401, если вход не выполнен."""
-    user = auth.session_user(conn, vtrende_session)
+    user = auth.session_user(conn, vcharte_session)
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Вход не выполнен.")
     return {"user": auth.public_user(user)}
@@ -272,13 +272,13 @@ def publish_rankings(conn: Db, _auth: InternalAuth):
 def logout(
     conn: Db,
     response: Response,
-    vtrende_session: Annotated[str | None, Cookie()] = None,
+    vcharte_session: Annotated[str | None, Cookie()] = None,
 ):
     """Удаляет сессию из базы и сбрасывает cookie."""
-    if vtrende_session:
+    if vcharte_session:
         conn.execute(
             "DELETE FROM user_sessions WHERE token_hash = %s",
-            (auth._token_hash(vtrende_session),),
+            (auth._token_hash(vcharte_session),),
         )
     response.delete_cookie(auth.SESSION_COOKIE, path="/")
     return {"message": "Выход выполнен."}
