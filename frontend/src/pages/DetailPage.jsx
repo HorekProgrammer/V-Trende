@@ -5,6 +5,7 @@ import DetailHero from '../components/detail/DetailHero';
 import StatGrid from '../components/detail/StatGrid';
 import PopularityCard from '../components/detail/PopularityCard';
 import DataState from '../components/common/DataState';
+import WeekSwitcher from '../components/common/WeekSwitcher';
 import { CATEGORIES } from '../components/category/categories';
 import { useApi } from '../api/useApi';
 import { trendPath } from '../api/paths';
@@ -27,10 +28,15 @@ function BackIcon() {
 export default function DetailPage() {
   const location = useLocation();
   const { id } = useParams();
-  const [week] = useWeek();
-  const weekQuery = week ? `?week=${week}` : '';
-  const { data: item, loading, error } = useApi(trendPath(id));
+  const [week, setWeek] = useWeek();
+  const fromWeek = new URLSearchParams(location.search).get('fromWeek');
+  const backWeekQuery = fromWeek ? `?week=${encodeURIComponent(fromWeek)}` : '';
+  const { data: item, loading, error } = useApi(trendPath(id, week));
   const category = item ? CATEGORIES.find((c) => c.id === item.sphere) : null;
+  const availableWeeks = item?.history
+    ?.filter((point) => point.rank != null)
+    .map((point) => point.weekStart)
+    .reverse() || [];
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -61,7 +67,7 @@ export default function DetailPage() {
   return (
     <div className="detail-wrap">
       <Link
-        to={location.state?.from || (category ? `/category/${category.id}${weekQuery}` : `/${weekQuery}`)}
+        to={location.state?.from || (category ? `/category/${category.id}${backWeekQuery}` : '/')}
         state={location.state?.scrollY != null ? { restoreScrollY: location.state.scrollY } : null}
         className="back-btn"
       >
@@ -72,10 +78,13 @@ export default function DetailPage() {
       <DataState loading={loading} error={error}>
         {item && category && (
           <>
+            <div className="detail-week-switcher">
+              <WeekSwitcher weeks={availableWeeks} value={week} onChange={setWeek} />
+            </div>
             <DetailHero item={item} category={category} />
             <StatGrid item={item} />
 
-            {!item.isNew && (
+            {item.history.some((point) => point.rank != null) && (
               <PopularityCard key={item.key} history={item.history} topSize={category.topSize} />
             )}
           </>
