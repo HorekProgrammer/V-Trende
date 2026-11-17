@@ -25,6 +25,7 @@ function ratingFormula(item)
   const result = item.score.toFixed(1);
 
   const components = item.scoreBreakdown?.components || [];
+  const auxiliary = item.scoreBreakdown?.auxiliary;
   const lines = components.map((component) => ({
     label: component.label,
     value: component.position == null
@@ -32,10 +33,19 @@ function ratingFormula(item)
       : `Позиция: #${component.position} → ${formatScore(component.value)} балла`,
   }));
 
-  if (item.sphere === 'games') return {
-    lines,
+  if (item.sphere === 'games') {
+    lines.push({ label: 'Баллы игровых чартов', value: source });
+    if (auxiliary) lines.push({
+      label: auxiliary.label,
+      value: auxiliary.position == null
+        ? `${formatScore(auxiliary.value)} балла`
+        : `Позиция: #${auxiliary.position} → ${formatScore(auxiliary.value)} балла`,
+    });
+    return {
+      lines,
     formula: `Лучший результат: ${source} × 65% + Whatstat: ${extra} × 35% = ${result}`,
-  };
+    };
+  }
 
   const sourceLabels = {
     music: 'Музыкальные чарты',
@@ -48,7 +58,7 @@ function ratingFormula(item)
       .join(' + ');
     const weightSum = components.reduce((sum, component) => sum + component.weight, 0);
     lines.push({
-      label: 'Баллы источников',
+      label: item.sphere === 'music' ? 'Баллы музыкальных чартов' : 'Баллы Кинопоиска',
       value: weightSum === 1 ? `${weighted} = ${source}` : `(${weighted}) ÷ ${(weightSum * 100).toFixed(0)}% = ${source}`,
     });
   } else if (components.length) {
@@ -57,6 +67,13 @@ function ratingFormula(item)
       .join(' + ');
     lines.push({ label: 'Баллы TwitchTracker', value: `${weighted} = ${source}` });
   }
+
+  if (auxiliary) lines.push({
+    label: auxiliary.label,
+    value: auxiliary.position == null
+      ? `${formatScore(auxiliary.value)} балла`
+      : `Позиция: #${auxiliary.position} → ${formatScore(auxiliary.value)} балла`,
+  });
 
   return {
     lines,

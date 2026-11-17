@@ -268,6 +268,41 @@ def score_breakdown(conn, record: dict) -> dict:
     category = record["category"]
     week_start = record["week_start"]
     trend_id = record["trend_id"]
+    extra_score = round(float(record["wordstat_score"]), 2)
+
+    if category == "games":
+        extra_row = _row(conn.execute(
+            """WITH ranked AS (
+                   SELECT trend_id,
+                          RANK() OVER (ORDER BY average_viewers DESC) AS position
+                   FROM game_audience_stats
+                   WHERE week_start = %s
+               )
+               SELECT position FROM ranked WHERE trend_id = %s""",
+            (week_start, trend_id),
+        ))
+        auxiliary = {
+            "label": "Whatstat",
+            "position": extra_row["position"] if extra_row else None,
+            "value": extra_score,
+        }
+    else:
+        extra_row = _row(conn.execute(
+            """WITH ranked AS (
+                   SELECT s.trend_id,
+                          RANK() OVER (ORDER BY s.search_count DESC) AS position
+                   FROM trend_search_stats s
+                   JOIN trends t ON t.id = s.trend_id
+                   WHERE s.week_start = %s AND t.category = %s
+               )
+               SELECT position FROM ranked WHERE trend_id = %s""",
+            (week_start, category, trend_id),
+        ))
+        auxiliary = {
+            "label": "Wordstat",
+            "position": extra_row["position"] if extra_row else None,
+            "value": extra_score,
+        }
 
     if category == "streamers":
         row = _row(conn.execute(
@@ -304,6 +339,7 @@ def score_breakdown(conn, record: dict) -> dict:
         )
         return {
             "kind": "streamers",
+            "auxiliary": auxiliary,
             "components": [
                 {
                     "label": label,
@@ -335,6 +371,7 @@ def score_breakdown(conn, record: dict) -> dict:
     ))
     return {
         "kind": category,
+        "auxiliary": auxiliary,
         "components": [
             {
                 "label": (
