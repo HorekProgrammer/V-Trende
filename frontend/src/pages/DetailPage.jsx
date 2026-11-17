@@ -8,8 +8,7 @@ import DataState from '../components/common/DataState';
 import WeekSwitcher from '../components/common/WeekSwitcher';
 import { CATEGORIES } from '../components/category/categories';
 import { useApi } from '../api/useApi';
-import { trendPath } from '../api/paths';
-import { useAuth } from '../api/useAuth'; 
+import { trendPath } from '../api/paths'; 
 import './DetailPage.css';
 
 function BackIcon() {
@@ -31,8 +30,6 @@ export default function DetailPage() {
   const { id } = useParams();
   const [week, setWeek] = useWeek();
   
-  
-  const { isAuthenticated, loading: authLoading } = useAuth();
 
   const fromWeek = new URLSearchParams(location.search).get('fromWeek');
   const backWeekQuery = fromWeek ? `?week=${encodeURIComponent(fromWeek)}` : '';
@@ -69,9 +66,7 @@ export default function DetailPage() {
   }
 
   
-  if (authLoading) {
-    return <DataState loading={true} />;
-  }
+ 
 
   return (
     <div className="detail-wrap">
@@ -92,21 +87,11 @@ export default function DetailPage() {
             </div>
             <DetailHero item={item} category={category} />
             <StatGrid item={item} />
-
-            
-            {isAuthenticated ? (
-              item.history.some((point) => point.rank != null) && (
-                <PopularityCard key={item.key} history={item.history} topSize={category.topSize} />
-              )
-            ) : (
-              <div className="chart-locked">
-                <div className="chart-locked-icon">🔒</div>
-                <h3>График доступен только зарегистрированным</h3>
-                <p>Войдите или создайте аккаунт, чтобы видеть динамику популярности тренда.</p>
-                <Link to="/login" className="btn-primary">Войти</Link>
-              </div>
+            {!item.isNew && (
+              <PopularityCard key={item.key} history={item.history} topSize={category.topSize} />
             )}
           </>
+          
         )}
       </DataState>
     </div>
