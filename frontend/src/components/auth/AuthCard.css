@@ -1,0 +1,32 @@
+.auth-card 
+{
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  padding: 36px 32px;
+}
+
+.auth-logo 
+{
+  justify-content: center;
+  margin-bottom: 22px;
+}
+
+.auth-h 
+{
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 23px;
+  text-align: center;
+}
+
+.auth-p 
+{
+  font-size: 13.5px;
+  color: var(--text-dim);
+  text-align: center;
+  margin-top: 8px;
+  margin-bottom: 26px;
+}

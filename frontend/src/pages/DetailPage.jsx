@@ -9,6 +9,7 @@ import WeekSwitcher from '../components/common/WeekSwitcher';
 import { CATEGORIES } from '../components/category/categories';
 import { useApi } from '../api/useApi';
 import { trendPath } from '../api/paths';
+import { useAuth } from '../api/useAuth'; 
 import './DetailPage.css';
 
 function BackIcon() {
@@ -29,6 +30,10 @@ export default function DetailPage() {
   const location = useLocation();
   const { id } = useParams();
   const [week, setWeek] = useWeek();
+  
+  
+  const { isAuthenticated, loading: authLoading } = useAuth();
+
   const fromWeek = new URLSearchParams(location.search).get('fromWeek');
   const backWeekQuery = fromWeek ? `?week=${encodeURIComponent(fromWeek)}` : '';
   const { data: item, loading, error } = useApi(trendPath(id, week));
@@ -51,8 +56,7 @@ export default function DetailPage() {
   }, [item]);
 
   const notFound = error && (error.status === 404 || error.status === 422);
-  if (notFound) 
-  {
+  if (notFound) {
     return (
       <div className="detail-wrap">
         <p>Тренд не найден</p>
@@ -62,6 +66,11 @@ export default function DetailPage() {
         </Link>
       </div>
     );
+  }
+
+  
+  if (authLoading) {
+    return <DataState loading={true} />;
   }
 
   return (
@@ -84,8 +93,18 @@ export default function DetailPage() {
             <DetailHero item={item} category={category} />
             <StatGrid item={item} />
 
-            {item.history.some((point) => point.rank != null) && (
-              <PopularityCard key={item.key} history={item.history} topSize={category.topSize} />
+            
+            {isAuthenticated ? (
+              item.history.some((point) => point.rank != null) && (
+                <PopularityCard key={item.key} history={item.history} topSize={category.topSize} />
+              )
+            ) : (
+              <div className="chart-locked">
+                <div className="chart-locked-icon">🔒</div>
+                <h3>График доступен только зарегистрированным</h3>
+                <p>Войдите или создайте аккаунт, чтобы видеть динамику популярности тренда.</p>
+                <Link to="/login" className="btn-primary">Войти</Link>
+              </div>
             )}
           </>
         )}

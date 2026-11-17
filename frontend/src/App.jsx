@@ -5,6 +5,8 @@ import CategoryPage from './pages/CategoryPage';
 import DetailPage from './pages/DetailPage';
 import EmberBackground from './components/common/EmberBackground';
 import YandexMetrika from './analytics/YandexMetrika';
+import AuthPage from './pages/AuthPage';
+import LoginPage from './pages/LoginPage';
 
 function App() {
   return (
@@ -16,8 +18,8 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/category/:name" element={<CategoryPage />} />
         <Route path="/trend/:id" element={<DetailPage />} />
-        <Route path="/auth" element={<Navigate to="/" replace />} />
-        <Route path="/login" element={<Navigate to="/" replace />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/login" element={<LoginPage />} />     
       </Routes>
     </BrowserRouter>
   );

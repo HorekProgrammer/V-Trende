@@ -9,3 +9,9 @@ export const categoryTrendsPath = (category, sort, week) =>
   withWeek(`/categories/${encodeURIComponent(category)}/trends?sort=${sort}&limit=100`, week);
 
 export const trendPath = (id, week) => withWeek(`/trends/${encodeURIComponent(id)}`, week);
+
+
+export const loginPath = () => '/auth/login';
+export const registerPath = () => '/auth/register';
+export const logoutPath = () => '/auth/logout';
+export const mePath = () => '/auth/me';
