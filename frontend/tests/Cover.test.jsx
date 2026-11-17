@@ -7,14 +7,17 @@ describe('Cover (Обложка)', () => {
     render(<Cover item={{ key: '1', title: 'Тест Трек', cover: null }} />);
     expect(screen.getByText('ТТ')).toBeInTheDocument();
   });
+
   it('должен рендерить картинку', () => {
-    render(<Cover item={{ key: '1', title: 'Тест', cover: 'https://example.com/img.jpg' }} />);
-    expect(screen.getByRole('img', { hidden: true })).toHaveAttribute('src', 'https://example.com/img.jpg');
+    const { container } = render(<Cover item={{ key: '1', title: 'Тест', cover: 'https://example.com/img.jpg' }} />);
+    const img = container.querySelector('img');
+    expect(img).toHaveAttribute('src', 'https://example.com/img.jpg');
   });
+
   it('должен скрывать картинку при ошибке загрузки', () => {
-    render(<Cover item={{ key: '1', title: 'Тест', cover: 'https://broken.jpg' }} />);
-    const img = screen.getByRole('img', { hidden: true });
+    const { container } = render(<Cover item={{ key: '1', title: 'Тест', cover: 'https://broken.jpg' }} />);
+    const img = container.querySelector('img');
     fireEvent.error(img);
-    expect(screen.queryByRole('img', { hidden: true })).not.toBeInTheDocument();
+    expect(container.querySelector('img')).toBeNull();
   });
 });

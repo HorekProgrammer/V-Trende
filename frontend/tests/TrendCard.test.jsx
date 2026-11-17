@@ -18,8 +18,9 @@ describe('TrendCard (Карточка тренда)', () => {
     expect(screen.getByText('NEW')).toBeInTheDocument();
   });
   it('должен показывать прочерк, если не было рейтинга', () => {
-    render(<TrendCard item={{ ...mockItem, prevRank: null, isNew: false }} />);
-    expect(screen.getByText('—')).toBeInTheDocument();
+    const { container } = render(<TrendCard item={{ ...mockItem, prevRank: null, isNew: false }} />);
+    const badge = container.querySelector('.trend-badge');
+    expect(badge).toHaveTextContent('—');
   });
   it('должен добавлять класс медали для топ-3', () => {
     const { container } = render(<TrendCard item={{ ...mockItem, rank: 1 }} />);
