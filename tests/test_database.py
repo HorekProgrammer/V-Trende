@@ -22,6 +22,7 @@ TEST_URL = (settings().get("TEST_DATABASE_URL") or "").strip()
 W1 = date(2026, 10, 5)
 W2 = date(2026, 10, 12)
 W3 = date(2026, 10, 19)
+W4 = date(2026, 11, 23)
 
 
 def tracks(*specs):
@@ -110,7 +111,7 @@ class MigrationTests(DatabaseTestCase):
         self.conn.execute((MIGRATIONS_DIR / "001_init.sql").read_text(encoding="utf-8"))
         self.assertEqual(
             migrate(self.conn, baseline="001"),
-            ["002", "003", "004", "005", "006", "007", "008", "009", "010", "011", "012", "013", "014", "015", "016", "017", "018", "019", "020"],
+            ["002", "003", "004", "005", "006", "007", "008", "009", "010", "011", "012", "013", "014", "015", "016", "017", "018", "019", "020", "021"],
         )
 
     def test_genres_are_seeded_and_category_is_enforced(self):
@@ -275,6 +276,24 @@ class LoaderTests(DatabaseTestCase):
             [(1, 12_345)],
         )
 
+    def test_game_audience_stats_create_a_whatstat_only_game(self):
+        payload = {"type": "game_audience_stats", "week_start": W1.isoformat(), "entries": [{
+            "match_key": "grand theft auto vi",
+            "source_title": "Grand Theft Auto VI",
+            "source_category_id": "gta-vi",
+            "source_url": "https://whatstat.ru/twitch/categories/gta-vi",
+            "position": 1,
+            "average_viewers": 500_000,
+        }]}
+
+        self.load(payload)
+
+        self.assertEqual(
+            self.rows("""SELECT t.title, s.position, s.average_viewers
+                         FROM game_audience_stats s JOIN trends t ON t.id = s.trend_id"""),
+            [("Grand Theft Auto VI", 1, 500_000)],
+        )
+
     def test_twitch_weekly_metrics_are_saved(self):
         channel = {
             "position": 1, "channel": "Streamer", "slug": "streamer",
@@ -409,6 +428,33 @@ class GameRankingTests(DatabaseTestCase):
         self.assertEqual(rows[1][0], "Игра 1")
         self.assertEqual(rows[0][2:], (100, 100, 1))
         self.assertEqual(rows[1][2:], (100, 0, 1))
+
+    def test_future_whatstat_only_games_use_80_percent_but_store_games_do_not(self):
+        self.load(build_payload("steam", steam((1, 1)), week=W1))
+        self.load(build_payload("steam", steam((1, 2)), week=W4))
+        keys = dict(self.rows("SELECT title, match_key FROM trends WHERE category = 'games'"))
+        self.load({"type": "game_audience_stats", "week_start": W4.isoformat(), "entries": [
+            {"match_key": "grand theft auto vi", "source_title": "Grand Theft Auto VI",
+             "source_category_id": "gta6", "source_url": "https://whatstat/gta6",
+             "position": 1, "average_viewers": 100_000},
+            {"match_key": keys["Игра 1"], "source_title": "Игра 1",
+             "source_category_id": "game1", "source_url": "https://whatstat/game1",
+             "position": 2, "average_viewers": 10_000},
+            {"match_key": keys["Игра 2"], "source_title": "Игра 2",
+             "source_category_id": "game2", "source_url": "https://whatstat/game2",
+             "position": 3, "average_viewers": 100},
+        ]})
+        self.refresh()
+
+        rows = self.rows(
+            """SELECT title, rank, score, source_score, wordstat_score, chart_count
+               FROM v_category_top_latest WHERE category = 'games' ORDER BY rank"""
+        )
+
+        self.assertEqual(rows[0], ("Grand Theft Auto VI", 1, 100, 0, 100, 0))
+        self.assertEqual(rows[1][0:4], ("Игра 2", 2, 65, 100))
+        self.assertEqual(rows[2][0], "Игра 1")
+        self.assertEqual(rows[2][5], 0)
 
 
 class SeedTests(DatabaseTestCase):

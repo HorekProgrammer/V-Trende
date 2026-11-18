@@ -47,6 +47,25 @@ class WhatstatMatchingTests(unittest.TestCase):
         self.assertEqual(unmatched, [])
         self.assertEqual(matched[0]["average_viewers"], 48_000)
 
+    def test_new_and_mobile_games_are_kept_but_non_game_categories_are_skipped(self):
+        categories = [
+            {"title": "Grand Theft Auto VI", "category_id": "gta6", "url": "u1",
+             "position": 1, "average_viewers": 500_000},
+            {"title": "PUBG MOBILE", "category_id": "pubgm", "url": "u2",
+             "position": 2, "average_viewers": 20_000},
+            {"title": "Общение", "category_id": "chat", "url": "u3",
+             "position": 3, "average_viewers": 10_000},
+        ]
+
+        matched, unmatched = match_categories(categories, {})
+
+        self.assertEqual([entry["match_key"] for entry in matched],
+                         ["grand theft auto vi", "pubg mobile"])
+        self.assertEqual([entry["source_title"] for entry in matched],
+                         ["Grand Theft Auto VI", "PUBG MOBILE"])
+        self.assertEqual([entry["title"] for entry in unmatched],
+                         ["Grand Theft Auto VI", "PUBG MOBILE", "Общение"])
+
 
 if __name__ == "__main__":
     unittest.main()
