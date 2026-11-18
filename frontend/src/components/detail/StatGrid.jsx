@@ -34,16 +34,21 @@ function ratingFormula(item)
   }));
 
   if (item.sphere === 'games') {
-    lines.push({ label: 'Баллы игровых чартов', value: source });
+    const sourceWeight = item.scoreBreakdown?.weights?.source ?? 0.65;
+    const auxiliaryWeight = item.scoreBreakdown?.weights?.auxiliary ?? 0.35;
+    if (sourceWeight > 0) lines.push({ label: 'Баллы игровых чартов', value: source });
     if (auxiliary) lines.push({
       label: auxiliary.label,
       value: auxiliary.position == null
         ? `${formatScore(auxiliary.value)} балла`
         : `Позиция: #${auxiliary.position} → ${formatScore(auxiliary.value)} балла`,
     });
+    const terms = [];
+    if (sourceWeight > 0) terms.push(`Лучший результат: ${source} × ${Math.round(sourceWeight * 100)}%`);
+    if (auxiliaryWeight > 0) terms.push(`Whatstat: ${extra} × ${Math.round(auxiliaryWeight * 100)}%`);
     return {
       lines,
-    formula: `Лучший результат: ${source} × 65% + Whatstat: ${extra} × 35% = ${result}`,
+      formula: `${terms.join(' + ')} = ${result}`,
     };
   }
 

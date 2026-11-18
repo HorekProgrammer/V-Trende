@@ -16,6 +16,15 @@ ALIASES = {
     "playerunknown s battlegrounds": "pubg battlegrounds",
 }
 
+# Twitch also exposes conversational and real-world categories in the same
+# table. They are useful for streamer analytics, but they are not games.
+NON_GAME_CATEGORIES = {
+    "art", "asmr", "food drink", "irl", "just chatting", "makers crafting",
+    "music", "politics", "pools hot tubs and beaches", "science technology",
+    "special events", "sports", "talk shows podcasts", "travel outdoors",
+    "sport", "obshchenie", "общение", "спорт",
+}
+
 
 def game_keys(conn, week: date) -> dict[str, str]:
     rows = conn.execute(
@@ -34,9 +43,14 @@ def match_categories(categories: list[dict], games: dict[str, str]) -> tuple[lis
     seen_keys = set()
     for category in categories:
         source_key = normalize_text(category["title"])
+        if source_key in NON_GAME_CATEGORIES:
+            unmatched.append(category)
+            continue
         target_key = ALIASES.get(source_key, source_key)
         match_key = by_normalized_title.get(target_key)
-        if match_key is None or match_key in seen_keys:
+        is_new = match_key is None
+        match_key = match_key or target_key
+        if match_key in seen_keys:
             unmatched.append(category)
             continue
         seen_keys.add(match_key)
@@ -48,6 +62,8 @@ def match_categories(categories: list[dict], games: dict[str, str]) -> tuple[lis
             "position": category["position"],
             "average_viewers": category["average_viewers"],
         })
+        if is_new:
+            unmatched.append(category)
     return matched, unmatched
 
 

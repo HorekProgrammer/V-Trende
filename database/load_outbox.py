@@ -387,12 +387,13 @@ def load_game_audience_stats(conn, payload: dict) -> str:
                 f"average_viewers должен быть неотрицательным целым: {average_viewers!r}."
             )
         row = conn.execute(
-            "SELECT id FROM trends WHERE category = 'games' AND match_key = %s",
-            (match_key,),
+            """INSERT INTO trends (category, title, match_key)
+               VALUES ('games', %s, %s)
+               ON CONFLICT (category, match_key) DO UPDATE
+                   SET title = trends.title
+               RETURNING id""",
+            (source_title, match_key),
         ).fetchone()
-        if row is None:
-            missing += 1
-            continue
         conn.execute(
             """
             INSERT INTO game_audience_stats (

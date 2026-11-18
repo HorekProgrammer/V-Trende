@@ -273,13 +273,18 @@ def score_breakdown(conn, record: dict) -> dict:
     if category == "games":
         extra_row = _row(conn.execute(
             """WITH ranked AS (
-                   SELECT trend_id,
+                   SELECT trend_id, average_viewers,
                           RANK() OVER (ORDER BY average_viewers DESC) AS position
                    FROM game_audience_stats
                    WHERE week_start = %s
                )
-               SELECT position FROM ranked WHERE trend_id = %s""",
-            (week_start, trend_id),
+               SELECT position, average_viewers,
+                      (SELECT average_viewers FROM game_audience_stats
+                       WHERE week_start = %s
+                       ORDER BY average_viewers DESC, trend_id
+                       OFFSET 1 LIMIT 1) AS second_viewers
+               FROM ranked WHERE trend_id = %s""",
+            (week_start, week_start, trend_id),
         ))
         auxiliary = {
             "label": "Whatstat",
@@ -369,9 +374,30 @@ def score_breakdown(conn, record: dict) -> dict:
            ORDER BY chart_weight DESC, source, chart_name""",
         (week_start, trend_id),
     ))
+    game_has_store = False
+    if category == "games" and not rows:
+        game_has_store = conn.execute(
+            """SELECT EXISTS (
+                   SELECT 1 FROM trend_source_items
+                   WHERE trend_id = %s AND source IN ('steam', 'epic')
+               )""",
+            (trend_id,),
+        ).fetchone()[0]
+    game_auxiliary_weight = 0.35
+    if category == "games" and not rows and week_start.isoformat() >= "2026-11-23" and not game_has_store:
+        game_auxiliary_weight = 0.80
+        if auxiliary and auxiliary["position"] == 1 and extra_row["second_viewers"]:
+            lead = extra_row["average_viewers"] / extra_row["second_viewers"] - 1
+            game_auxiliary_weight += min(0.20, max(0.0, lead) * 0.20)
+
     return {
         "kind": category,
         "auxiliary": auxiliary,
+        "weights": (
+            {"source": 0.0, "auxiliary": game_auxiliary_weight}
+            if category == "games" and not rows and week_start.isoformat() >= "2026-11-23"
+            else {"source": 0.65, "auxiliary": 0.35}
+        ) if category == "games" else None,
         "components": [
             {
                 "label": (
