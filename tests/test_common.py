@@ -14,6 +14,7 @@ from parser.common import (
     CHARTS,
     SaveError,
     build_payload,
+    canonical_non_music_title,
     match_key,
     normalize_text,
     resolve_limit,
@@ -64,6 +65,12 @@ class NormalizeTests(unittest.TestCase):
 
     def test_title_only_for_non_music(self):
         self.assertEqual(match_key("Counter-Strike 2™"), "counter strike 2")
+
+    def test_gta_v_editions_share_one_key(self):
+        self.assertEqual(match_key("Grand Theft Auto V Legacy"), "grand theft auto v")
+        self.assertEqual(match_key("Grand Theft Auto V Enhanced"), "grand theft auto v")
+        self.assertEqual(canonical_non_music_title("Grand Theft Auto V Legacy"), "Grand Theft Auto V")
+        self.assertEqual(canonical_non_music_title("Grand Theft Auto V Enhanced"), "Grand Theft Auto V")
 
     def test_empty_values_are_rejected(self):
         with self.assertRaises(ValueError):
@@ -136,6 +143,17 @@ class BuildPayloadTests(unittest.TestCase):
             "external_id": "570", "url": "https://store.steampowered.com/app/570/", "cover_url": None,
             "match_key": "dota 2",
         })
+
+    def test_gta_v_editions_are_one_game(self):
+        items = [
+            {"position": 2, "title": "Grand Theft Auto V Legacy", "steam_app_id": 271590},
+            {"position": 5, "title": "Grand Theft Auto V Enhanced", "steam_app_id": 3240220},
+        ]
+        entries = build_payload("steam", items, week=MONDAY)["entries"]
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0]["position"], 2)
+        self.assertEqual(entries[0]["title"], "Grand Theft Auto V")
+        self.assertEqual(entries[0]["match_key"], "grand theft auto v")
 
     def test_kinopoisk_and_epic_entries(self):
         film = build_payload("kinopoisk_boxoffice", [{"position": 1, "title": "Фильм", "kinopoisk_id": 42,

@@ -5,7 +5,7 @@ import sys
 from datetime import date, datetime
 
 from database.db import DatabaseConfigError, connect
-from parser.common import SaveError, normalize_text, save_payload, week_start
+from parser.common import SaveError, match_key, normalize_text, save_payload, week_start
 from parser.common.upload import MOSCOW_TZ
 from parser.whatstat_categories import get_whatstat_categories
 
@@ -38,7 +38,7 @@ def game_keys(conn, week: date) -> dict[str, str]:
 
 
 def match_categories(categories: list[dict], games: dict[str, str]) -> tuple[list[dict], list[dict]]:
-    by_normalized_title = {normalize_text(title): key for key, title in games.items()}
+    by_normalized_title = {match_key(title): key for key, title in games.items()}
     matched, unmatched = [], []
     seen_keys = set()
     for category in categories:
@@ -47,15 +47,15 @@ def match_categories(categories: list[dict], games: dict[str, str]) -> tuple[lis
             unmatched.append(category)
             continue
         target_key = ALIASES.get(source_key, source_key)
-        match_key = by_normalized_title.get(target_key)
-        is_new = match_key is None
-        match_key = match_key or target_key
-        if match_key in seen_keys:
+        matched_key = by_normalized_title.get(target_key)
+        is_new = matched_key is None
+        matched_key = matched_key or target_key
+        if matched_key in seen_keys:
             unmatched.append(category)
             continue
-        seen_keys.add(match_key)
+        seen_keys.add(matched_key)
         matched.append({
-            "match_key": match_key,
+            "match_key": matched_key,
             "source_title": category["title"],
             "source_category_id": category["category_id"],
             "source_url": category["url"],
