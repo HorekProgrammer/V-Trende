@@ -10,7 +10,7 @@ from typing import Callable
 
 from .circuit_breaker import protected_call
 from .covers import clean_image_url
-from .normalize import match_key
+from .normalize import canonical_non_music_title, match_key
 
 CATEGORY_LIMITS = {
     "music": 100,
@@ -66,7 +66,7 @@ def steam_entry(item: dict) -> dict:
     app_id = item["steam_app_id"]
     return _entry(
         item,
-        title=item["title"],
+        title=canonical_non_music_title(item["title"]),
         key=match_key(item["title"]),
         external_id=app_id,
         url=f"https://store.steampowered.com/app/{app_id}/",
@@ -77,7 +77,7 @@ def epic_entry(item: dict) -> dict:
     slug = item.get("epic_slug")
     return _entry(
         item,
-        title=item["title"],
+        title=canonical_non_music_title(item["title"]),
         key=match_key(item["title"]),
         external_id=item["epic_offer_id"],
         url=f"https://store.epicgames.com/ru/p/{slug}" if slug else None,

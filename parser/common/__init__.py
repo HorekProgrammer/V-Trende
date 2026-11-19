@@ -1,5 +1,5 @@
 from .charts import CATEGORY_LIMITS, CHARTS
-from .normalize import match_key, normalize_text
+from .normalize import canonical_non_music_title, match_key, normalize_text
 from .search_query import default_search_query
 from .upload import (
     SaveError,
@@ -22,6 +22,7 @@ __all__ = [
     "add_save_argument",
     "build_failure_payload",
     "build_payload",
+    "canonical_non_music_title",
     "default_search_query",
     "match_key",
     "normalize_text",

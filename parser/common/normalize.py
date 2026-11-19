@@ -15,6 +15,16 @@ _ARTIST_SEPARATORS_RE = re.compile(r"\s*(?:,|&|\sx\s|\sи\s|\sfeat\.?\s|\sft\.?\
 _NOT_WORD_RE = re.compile(r"[^\w\s]")
 _SPACES_RE = re.compile(r"\s+")
 
+_NON_MUSIC_TITLE_ALIASES = {
+    "grand theft auto v legacy": "grand theft auto v",
+    "grand theft auto v enhanced": "grand theft auto v",
+}
+
+_NON_MUSIC_DISPLAY_TITLES = {
+    "grand theft auto v legacy": "Grand Theft Auto V",
+    "grand theft auto v enhanced": "Grand Theft Auto V",
+}
+
 
 def normalize_text(value: str) -> str:
     """Регистр, ё/е, пометки feat./prod./explicit, пунктуация и лишние пробелы не влияют на результат."""
@@ -35,13 +45,18 @@ def main_artist(artists: list[str]) -> str:
     return _ARTIST_SEPARATORS_RE.split(artists[0].strip(), maxsplit=1)[0]
 
 
+def canonical_non_music_title(title: str) -> str:
+    """Display title shared by explicitly known editions of one non-music object."""
+    return _NON_MUSIC_DISPLAY_TITLES.get(normalize_text(title), title)
+
+
 def match_key(title: str, artists: list[str] | None = None) -> str:
     """Ключ сопоставления: «исполнитель|название» для музыки, «название» для остального."""
     normalized_title = normalize_text(title)
     if not normalized_title:
         raise ValueError(f"Пустое название после нормализации: {title!r}")
     if artists is None:
-        return normalized_title
+        return _NON_MUSIC_TITLE_ALIASES.get(normalized_title, normalized_title)
     artist = normalize_text(main_artist(artists))
     if not artist:
         raise ValueError(f"Не указан исполнитель для трека {title!r}")
