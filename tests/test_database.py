@@ -111,7 +111,7 @@ class MigrationTests(DatabaseTestCase):
         self.conn.execute((MIGRATIONS_DIR / "001_init.sql").read_text(encoding="utf-8"))
         self.assertEqual(
             migrate(self.conn, baseline="001"),
-            ["002", "003", "004", "005", "006", "007", "008", "009", "010", "011", "012", "013", "014", "015", "016", "017", "018", "019", "020", "021"],
+            ["002", "003", "004", "005", "006", "007", "008", "009", "010", "011", "012", "013", "014", "015", "016", "017", "018", "019", "020", "021", "022"],
         )
 
     def test_genres_are_seeded_and_category_is_enforced(self):
@@ -436,7 +436,7 @@ class GameRankingTests(DatabaseTestCase):
         self.load({"type": "game_audience_stats", "week_start": W4.isoformat(), "entries": [
             {"match_key": "grand theft auto vi", "source_title": "Grand Theft Auto VI",
              "source_category_id": "gta6", "source_url": "https://whatstat/gta6",
-             "position": 1, "average_viewers": 100_000},
+             "position": 1, "average_viewers": 15_000},
             {"match_key": keys["Игра 1"], "source_title": "Игра 1",
              "source_category_id": "game1", "source_url": "https://whatstat/game1",
              "position": 2, "average_viewers": 10_000},

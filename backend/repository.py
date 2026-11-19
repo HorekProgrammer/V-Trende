@@ -388,7 +388,7 @@ def score_breakdown(conn, record: dict) -> dict:
         game_auxiliary_weight = 0.80
         if auxiliary and auxiliary["position"] == 1 and extra_row["second_viewers"]:
             lead = extra_row["average_viewers"] / extra_row["second_viewers"] - 1
-            game_auxiliary_weight += min(0.20, max(0.0, lead) * 0.20)
+            game_auxiliary_weight += min(0.20, max(0.0, lead) * 0.40)
 
     return {
         "kind": category,
