@@ -15,6 +15,7 @@ from database.image_store import COVER_DIR
 from database.load_outbox import PayloadError, load_payload, refresh_rankings
 
 from . import auth, repository
+from .request_logging import install_request_logging
 from .seo import category_html, load_frontend_index, sitemap_xml, spa_html, trend_html
 
 COVER_DIR.mkdir(parents=True, exist_ok=True)
@@ -30,6 +31,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+install_request_logging(app)
 
 
 def database():
