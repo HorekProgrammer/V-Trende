@@ -8,6 +8,7 @@ import DataState from '../components/common/DataState';
 import FAQ from '../components/common/FAQ';
 import { useApi } from '../api/useApi';
 import { feedPath } from '../api/paths';
+import { setPageMetadata } from '../utils/seo';
 import './HomePage.css';
 
 const SECTIONS = 
@@ -35,7 +36,11 @@ export default function HomePage()
   };
 
   useEffect(() => {
-    document.title = 'Актуальные рейтинги музыки, фильмов, игр и стримеров | В ЧАРТЕ';
+    setPageMetadata({
+      title: 'В ЧАРТЕ — рейтинги музыки, игр, фильмов и стримеров',
+      description: 'В ЧАРТЕ — еженедельные рейтинги популярности: музыкальные чарты, популярные игры, фильмы и топ стримеров. Позиции, изменения и история.',
+      path: '/',
+    });
   }, []);
 
   useEffect(() =>

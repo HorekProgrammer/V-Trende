@@ -12,6 +12,7 @@ import { useApi } from '../api/useApi';
 import { categoryTrendsPath, weeksPath } from '../api/paths';
 import { useWeek } from '../api/useWeek';
 import { formatWeek } from '../utils/dates';
+import { setPageMetadata } from '../utils/seo';
 import './CategoryPage.css';
 
 function CategoryView({ category }) {
@@ -22,13 +23,25 @@ function CategoryView({ category }) {
   const [selectedGenres, setSelectedGenres] = useState([]);
 
   useEffect(() => {
-    const titles = {
-      music: 'Популярная музыка — рейтинг недели | В ЧАРТЕ',
-      movies: 'Популярные фильмы — рейтинг недели | В ЧАРТЕ',
-      games: 'Популярные игры — рейтинг недели | В ЧАРТЕ',
-      streamers: 'Популярные стримеры — рейтинг недели | В ЧАРТЕ',
+    const metadata = {
+      music: {
+        title: 'Популярные песни — музыкальный чарт недели | В ЧАРТЕ',
+        description: 'Музыкальный чарт недели: популярные песни и треки по данным музыкальных сервисов. Текущие позиции, изменения и история рейтинга.',
+      },
+      movies: {
+        title: 'Топ фильмов недели — рейтинг популярности | В ЧАРТЕ',
+        description: 'Топ популярных фильмов за неделю по данным Кинопоиска и зрительского интереса. Текущие позиции, изменения и история рейтинга.',
+      },
+      games: {
+        title: 'Топ игр недели — рейтинг популярных игр | В ЧАРТЕ',
+        description: 'Топ популярных игр за неделю по данным магазинных чартов и зрительской аудитории. Текущие позиции, изменения и история рейтинга.',
+      },
+      streamers: {
+        title: 'Топ стримеров недели — рейтинг популярных стримеров | В ЧАРТЕ',
+        description: 'Топ русскоязычных стримеров за неделю по статистике TwitchTracker и поисковому интересу. Позиции, изменения и история рейтинга.',
+      },
     };
-    document.title = titles[category.id];
+    setPageMetadata({ ...metadata[category.id], path: `/category/${category.id}` });
   }, [category.id]);
   const [week, setWeek] = useWeek();
   const { data: weeks } = useApi(weeksPath());

@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from backend.app import app, database
 from backend.seo import (
+    CATEGORY_META,
     PUBLIC_PATHS,
     SITE_URL,
     SITEMAP_NAMESPACE,
@@ -104,6 +105,8 @@ class SeoDocumentTests(unittest.TestCase):
         self.assertIn('<meta name="description"', rendered)
         self.assertNotIn("data-state--error", rendered)
         self.assertNotIn("Не удалось загрузить данные", rendered)
+        self.assertIn("В ЧАРТЕ — рейтинги музыки, игр, фильмов и стримеров", rendered)
+        self.assertIn("Музыкальные чарты, популярные игры и фильмы, топ стримеров", rendered)
 
         hostile = {**FEED, "global": [{**FEED["global"][0], "title": "</script>"}]}
         self.assertNotIn("</script></strong>", spa_html(INDEX_HTML, hostile))
@@ -127,13 +130,32 @@ class SeoDocumentTests(unittest.TestCase):
         self.assertIn("<h1>Игры</h1>", rendered)
         self.assertIn("Настоящий лидер", rendered)
         self.assertIn('href="/trend/7"', rendered)
-        self.assertIn("Популярные игры — рейтинг недели | В ЧАРТЕ", rendered)
+        self.assertIn("Топ игр недели — рейтинг популярных игр | В ЧАРТЕ", rendered)
+        self.assertIn("Популярные игры в еженедельном рейтинге", rendered)
         self.assertIn(
             '<link rel="canonical" href="https://vcharte.com/category/games">',
             rendered,
         )
         self.assertIn('property="og:title"', rendered)
         self.assertNotIn("data-state--error", rendered)
+
+    def test_public_pages_have_unique_titles_and_descriptions(self):
+        home = spa_html(INDEX_HTML, FEED)
+        pages = [home] + [
+            category_html(INDEX_HTML, key, label, {"weekStart": "2026-11-16", "items": []})
+            for key, label in {
+                "music": "Музыка", "movies": "Фильмы",
+                "games": "Игры", "streamers": "Стримеры",
+            }.items()
+        ]
+        titles = [page.split("<title>", 1)[1].split("</title>", 1)[0] for page in pages]
+        descriptions = [
+            page.split('<meta name="description" content="', 1)[1].split('">', 1)[0]
+            for page in pages
+        ]
+        self.assertEqual(len(titles), len(set(titles)))
+        self.assertEqual(len(descriptions), len(set(descriptions)))
+        self.assertEqual(len(CATEGORY_META), 4)
 
     def test_trend_html_contains_facts_history_links_and_metadata(self):
         item = {
