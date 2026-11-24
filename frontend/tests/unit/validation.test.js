@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateEmail, validatePassword } from '../src/utils/validation';
+import { validateEmail, validatePassword } from '../../src/utils/validation';
 
 describe('Функция validateEmail', () => {
   it('должна выдавать ошибку при пустом значении', () => {

@@ -19,6 +19,7 @@ from parser.common.covers import (
 )
 from parser.epic_popular import epic_popular_parser
 from parser.steam.steam_parser import _parse_chart as parse_steam_chart
+from tests.unit import test_kion, test_shazam
 
 MONDAY = date(2026, 10, 19)
 STEAM = "https://shared.akamai.steamstatic.com/store_item_assets/"
@@ -188,7 +189,7 @@ class ChartsWithoutCoversTests(unittest.TestCase):
         from parser.kion import parse_chart_html as kion
         from parser.shazam import parse_chart_html as shazam
         from parser.zvuk import parse_chart_html as zvuk
-        from tests import test_kion, test_shazam, test_zvuk
+        from tests.unit import test_zvuk
 
         kion_tracks = test_kion.tracks()
         for track in kion_tracks:
@@ -207,7 +208,7 @@ class ChartsWithoutCoversTests(unittest.TestCase):
 
     def test_twitch_without_avatar(self):
         from parser.twitch import parse_ranking_positions_html
-        from tests.test_twitch import page
+        from tests.unit.test_twitch import page
 
         html = re.sub(r"<img[^>]*>", "<img>", page())
         result = parse_ranking_positions_html(html)
@@ -216,7 +217,7 @@ class ChartsWithoutCoversTests(unittest.TestCase):
 
     def test_twitch_cover_reaches_payload(self):
         from parser.twitch import parse_ranking_positions_html
-        from tests.test_twitch import page
+        from tests.unit.test_twitch import page
 
         channels = parse_ranking_positions_html(page())
         entry = build_payload("twitch", channels, week=MONDAY)["entries"][0]

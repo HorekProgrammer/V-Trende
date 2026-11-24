@@ -10,7 +10,7 @@ from backend.app import app
 class RequestLoggingTests(unittest.TestCase):
     def test_deployment_disables_unsanitized_uvicorn_access_log(self):
         dockerfile = (
-            Path(__file__).resolve().parents[1] / "deploy" / "Dockerfile.api"
+            Path(__file__).resolve().parents[2] / "deploy" / "Dockerfile.api"
         ).read_text(encoding="utf-8")
         self.assertIn("--no-access-log", dockerfile)
 

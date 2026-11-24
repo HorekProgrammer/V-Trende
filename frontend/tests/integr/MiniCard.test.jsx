@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import MiniCard from '../src/components/trends/MiniCard';
+import MiniCard from '../../src/components/trends/MiniCard';
 
 describe('MiniCard (Мини-карточка)', () => {
   it('должен рендерить данные', () => {

@@ -13,7 +13,7 @@ from unittest.mock import patch
 from parser.common import browser
 from parser.common.browser import BrowserFetchError, fetch_html
 from parser.zvuk import parse_chart_html
-from tests.test_zvuk import tracks
+from tests.unit.test_zvuk import tracks
 
 FULL = json.dumps({"props": {"pageProps": {"hydrationData": {"trackList": {"tracks": tracks()}}}}})
 

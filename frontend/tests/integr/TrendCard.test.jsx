@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import TrendCard from '../src/components/trends/TrendCard';
+import TrendCard from '../../src/components/trends/TrendCard';
 
 const mockItem = { key: '1', rank: 2, prevRank: 4, peak: 1, weeks: 5, title: 'Тест', subtitle: 'Суб', isNew: false };
 

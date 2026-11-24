@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { setPageMetadata } from '../src/utils/seo';
+import { setPageMetadata } from '../../src/utils/seo';
 
 describe('setPageMetadata', () => {
   beforeEach(() => {

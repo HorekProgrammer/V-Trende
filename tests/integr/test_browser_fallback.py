@@ -7,7 +7,7 @@ from urllib.error import HTTPError
 from parser.shazam import get_shazam_chart
 from parser.zvuk import get_zvuk_chart
 from parser.zvuk.zvuk_parser import CHART_URL
-from tests.test_zvuk import page, tracks
+from tests.unit.test_zvuk import page, tracks
 
 CHART_HTML = page(tracks())
 CHALLENGE_HTML = "<html><body>Servicepipe: проверка браузера</body></html>"

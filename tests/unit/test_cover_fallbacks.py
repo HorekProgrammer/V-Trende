@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+
 from parser.kinopoisk.posters import fill_missing_details, film_year, poster_url
 from parser.twitch import avatars
 from parser.twitch.avatars import avatar_from_channel_html, fill_missing_avatars
@@ -116,7 +117,7 @@ class KinopoiskYearTests(unittest.TestCase):
 
 class TwitchAvatarSourcesTests(unittest.TestCase):
     def test_lazy_image_attribute(self):
-        from tests.test_twitch import page
+        from tests.unit.test_twitch import page
         html = page().replace(
             '<img src="https://static-cdn.jtvnw.net/jtv_user_pictures/ch1-profile_image-70x70.png">',
             '<img src="data:image/gif;base64,R0lGOD" '

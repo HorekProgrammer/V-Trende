@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import Cover from '../src/components/common/Cover';
+import Cover from '../../src/components/common/Cover';
 
 describe('Cover (Обложка)', () => {
   it('должен выводить инициалы, если нет обложки', () => {

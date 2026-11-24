@@ -4,7 +4,7 @@ import {
   loadYandexMetrika,
   resetMetrikaForTests,
   trackPageView,
-} from '../src/analytics/metrika.js';
+} from '../../src/analytics/metrika.js';
 
 function environment() {
   const inserted = [];
