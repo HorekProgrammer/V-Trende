@@ -18,7 +18,7 @@ from backend.seo import (
 )
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 INDEX_HTML = '<!doctype html><html><head><title>В Чарте</title></head><body><div id="root"></div><script src="/assets/app.js"></script></body></html>'
 FEED = {
     "weekStart": "2026-11-16",

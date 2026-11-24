@@ -15,3 +15,21 @@ data/
 cookie.txt
 server.txt
 vk.txt
+
+
+# Отчеты о покрытии (Coverage)
+htmlcov_unit/
+htmlcov_integr/
+.coverage
+coverage.json
+coverage/
+
+# Отчеты Playwright (E2E)
+playwright-report/
+test-results/
+
+coverage_html/
+
+.vscode/
+
+reports/

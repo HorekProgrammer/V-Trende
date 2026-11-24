@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import HomePage from '../src/pages/HomePage';
+import HomePage from '../../src/pages/HomePage';
 
 global.fetch = vi.fn();
 

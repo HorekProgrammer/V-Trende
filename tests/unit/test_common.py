@@ -23,10 +23,10 @@ from parser.common import (
 )
 from parser.common.upload import MOSCOW_TZ
 from parser.twitch import get_russian_twitch_positions, parse_ranking_positions_html
-from tests.test_twitch import page as twitch_page
-from tests.test_twitch import response as twitch_response
-from tests.test_zvuk import page as zvuk_page
-from tests.test_zvuk import tracks as zvuk_tracks
+from tests.unit.test_twitch import page as twitch_page
+from tests.unit.test_twitch import response as twitch_response
+from tests.unit.test_zvuk import page as zvuk_page
+from tests.unit.test_zvuk import tracks as zvuk_tracks
 
 MONDAY = date(2026, 10, 19)
 

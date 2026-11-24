@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { coverGrad, initials, fmtSearches } from '../src/utils/trendFormat';
+import { coverGrad, initials, fmtSearches } from '../../src/utils/trendFormat';
 
 describe('initials (Инициалы)', () => {
   it('должна брать первые буквы двух слов', () => {

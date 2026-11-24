@@ -12,7 +12,7 @@
 
 2. Пользователь заходит на главную страницу сайта. Он нажимает на выпадающий список категорий в верхней части страницы и выбирает «Игры». Открывается страница с трендами по категории «Игры».  Затем пользователь нажимает на кнопку «По новизне» в поле фильтров. В результате пользователь получает список актуальных игровых трендов, упорядоченных по времени появления, что позволяет ему быстрее найти подходящие и релевантные инфоповоды.
 
-3. Пользователь регистрируется на сайте, вводя email и пароль. После успешной регистрации открывается главная страница сайта. Пользователь нажимает на карточку тренда и переходит на страницу, с детальным описанием конкретного тренда. Пользователь может видит график изменения его популярности за определенный период. В результате пользователь может оценить, насколько событие сохраняет актуальность, понять растет ли к нему интерес или постепенно угасает.
+3. Пользователь, находясь на странице с трендами по категории «Фильмы» нажимает на карточку тренда и переходит на страницу, с детальным описанием конкретного тренда. Пользователь может видеть график изменения его популярности за определенный период. В результате пользователь может оценить, насколько событие сохраняет актуальность, понять растет ли к нему интерес или постепенно угасает.
 
 ### Масштаб системы
 
@@ -20,13 +20,9 @@
 
 ### Отказоустойчивость
 
-Предлагается использовать связку Circuit Breaker + кэширование, так как это наиболее оптимальный вариант для нашей ситуации.
-
-Circuit Breaker позволяет избежать бесконечных повторных запросов к недоступному API. Если API становится недоступным, мы прекращаем попытки обращения после определённого количества неудачных запросов. Далее система периодически проверяет состояние API: если оно восстановилось и работает стабильно — возобновляем нормальную работу. Если нет — продолжаем ждать с заданным интервалом.
-
+Для обеспечения стабильности работы системы при сбоях внешних источников, мы применили Circuit Breaker и кэширование. 
+Circuit Breaker позволяет избежать бесконечных повторных запросов к недоступному API. Если API становится недоступным, мы прекращаем попытки обращения после определённого количества неудачных запросов. Далее система периодически проверяет состояние API: если оно восстановилось и работает стабильно, то возобновляем нормальную работу. Если нет - продолжаем ждать с заданным интервалом.
 Кэширование в этом случае выступает как страховка. При недоступности API мы отдаём последние актуальные данные (например, за предыдущий день). Circuit Breaker параллельно продолжает проверять восстановление соединения. Поскольку тренды у нас обновляются раз в неделю, такой подход не должен создавать критических проблем с актуальностью данных.
-
-Деградации функций в нашем случае избыточна. Оба предложенных механизма уже закрывают основные риски отказоустойчивости. Дополнительное усложнение архитектуры неоправданно. Кроме того, деградация обычно строится на приоритизации функций, а в нашем продукте сложно выделить элементы, которые можно было бы временно отключить без заметного ухудшения пользовательского опыта.
 
 ## Разработка архитектуры и детальное проектирование
 
@@ -42,13 +38,13 @@ Circuit Breaker позволяет избежать бесконечных по�
 
 Всего просмотров страниц в сутки = 10000 * 1.3 * 4 = 52000
 
-К Read относится: просмотр главной ленты трендов, просмотр ленты по категории + сортировка, открытие страницы конкретного тренда, запрос истории популярности (график), повторные запросы при обновлении страницы.
+К Read относится: просмотр главной ленты трендов, просмотр ленты по категории и сортировка, открытие страницы конкретного тренда, запрос истории популярности (график), повторные запросы при обновлении страницы.
 
 Средний Read RPS = 52000 / 86400 = 0.6 запросов в секунду.
 
 Пиковый с коэффициентом 5 = 3 запроса в секунду.
 
-К Write относится: регистрация и авторизация пользователей, обновление текущих трендов и запись истории популярности. Регистрация/авторизация пользователей + еженедельное пакетное обновление трендов парсерами (300 объектов в неделю: 100 треков, 100 игр, 50 фильмов, 50 стримеров). Запись производится батчами раз в 7 дней и создает околонулевую постоянную нагрузку.
+К Write относится: обновление текущих трендов и запись истории популярности. Еженедельное пакетное обновление трендов парсерами (300 объектов в неделю: 100 треков, 100 игр, 50 фильмов, 50 стримеров). Запись производится батчами раз в 7 дней и создает околонулевую постоянную нагрузку.
 
 Исходя из этого 90–95% Read / 5–10% Write
 
@@ -150,58 +146,157 @@ graph LR
 
 ### Контракты API
 
-#### Аутентификация
+#### Публичные эндпоинты:
 
-| № | Метод | Эндпоинт | Описание |  Latency |
-|---|-------|----------|----------|---------|
-| 1 | POST | `/api/v1/auth/register` | Регистрация нового пользователя | < 500 мс |
-| 2 | POST | `/api/v1/auth/login` | Вход в профиль пользователя | < 500 мс |
-| 3 | GET | `/api/v1/auth/me` | Получение профиля текущего пользователя | < 100 мс |
+| № | Метод | Эндпоинт | Описание |
+|---|-------|----------|----------|
+| 1 | GET | `/api/v1/health` | Проверка доступности API |
+| 2 | GET | `/api/v1/weeks` | Список доступных недель |
+| 3 | GET | `/api/v1/categories` | Список категорий и жанров |
+| 4 | GET | `/api/v1/feed` | Главная лента |
+| 5 | GET | `/api/v1/trends` | Общий список трендов |
+| 6 | GET | `/api/v1/categories/{category}/trends` | Тренды по категории |
+| 7 | GET | `/api/v1/trends/{trend_id}` | Детали тренда |
+| 8 | GET | `/api/v1/trends/{trend_id}/history` | История позиций тренда |
 
 #### Тренды
 
-| № | Метод | Эндпоинт | Описание | Параметры | Latency |
-|---|-------|----------|----------|-----------|---------|
-| 4 | GET | `/api/v1/trends` | Получение трендов для главной страницы | `limit=20, offset=0` | < 30 мс |
-| 5 | GET | `/api/v1/trends/category/{category_name}` | Получение трендов по конкретной категории | `sort_by, limit` | < 40 мс |
-| 6 | GET | `/api/v1/trends/{trend_id}/history` | Получение временных точек для графика | `period=30d` | < 50 мс |
+| № | Метод | Эндпоинт | Описание |
+|---|-------|----------|----------|
+| 1 | POST | `/api/v1/internal/update-trends` | Загрузка новых чартов от парсеров |
+| 2 | POST | `/api/v1/internal/update-search-stats` | Загрузка статистики Wordstat |
+| 3 | POST | `/api/v1/internal/update-game-audience-stats` | Загрузка статистики Whatstat |
+| 4 | POST | `/api/v1/internal/publish-rankings` | Пересчет и публикация рейтинга |
 
-#### Служебные
-
-| № | Метод | Эндпоинт | Описание | Latency |
-|---|-------|----------|----------|---------|
-| 7 | POST | `/api/v1/internal/update-trends` | Передача данных парсером в бэкенд | < 100 мс |
 
 ### Проектирование данных
 
 ```mermaid
 erDiagram
-    USERS {
-        integer id PK "Автоинкремент"
-        varchar email UK "Уникальный email"
-        varchar password_hash "Хэшированный пароль"
-        timestamp created_at "Дата регистрации"
+    category_settings {
+        text category PK
+        smallint top_limit
+        smallint min_charts
     }
 
-    TRENDS {
-        integer id PK "Автоинкремент"
-        varchar title "Название (напр., Counter-Strike 2)"
-        varchar category "Категория (games, music, movies, streamers)"
-        varchar source "Источник (напр., Steam, Кинопоиск)"
-        varchar url "Ссылка на первоисточник"
-        timestamp created_at "Когда тренд впервые попал в систему"
+    chart_weights {
+        text source PK
+        text name PK
+        numeric weight
     }
 
-    TREND_HISTORY {
-        integer id PK "Автоинкремент"
-        integer trend_id FK "Ссылка на таблицу TRENDS"
-        integer current_rank "Позиция в топе (1-100)"
-        integer wordstat_score "Индекс популярности из Вордстат"
-        timestamp recorded_at "Дата и время замера (раз в неделю)"
+    charts {
+        bigint id PK
+        text source
+        text name
+        text category
+        timestamp_with_time_zone created_at
     }
 
-    TRENDS ||--o{ TREND_HISTORY : "имеет историю"
+    chart_runs {
+        bigint id PK
+        bigint chart_id FK
+        date week_start
+        text status
+        timestamp_with_time_zone started_at
+        timestamp_with_time_zone finished_at
+        text error
+    }
 
+    trend_history {
+        bigint id PK
+        bigint run_id FK
+        bigint trend_id FK
+        smallint position
+    }
+
+    genres {
+        smallint id PK
+        text category
+        text name
+    }
+
+    trend_genres {
+        bigint trend_id PK
+        smallint genre_id PK
+        text category
+        smallint position
+    }
+
+    schema_migrations {
+        text version PK
+        text name
+        text checksum
+        timestamp_with_time_zone applied_at
+    }
+
+    trends {
+        bigint id PK
+        text category
+        text title
+        text subtitle
+        text match_key
+        timestamp_with_time_zone created_at
+        smallint genre_id FK
+        text search_query
+        text cover_url
+        text cover_source
+        timestamp_with_time_zone genres_resolved_at
+    }
+
+    twitch_weekly_stats {
+        bigint trend_id PK
+        date week_start PK
+        bigint total_followers
+        numeric hours_streamed
+        bigint average_viewers
+        bigint peak_viewers
+        bigint hours_watched
+        bigint followers_gained
+        numeric followers_per_hour
+        timestamp_with_time_zone collected_at
+    }
+
+    trend_search_stats {
+        bigint trend_id PK
+        date week_start PK
+        text query
+        integer search_count
+        timestamp_with_time_zone collected_at
+    }
+
+    trend_source_items {
+        bigint id PK
+        bigint trend_id FK
+        text source
+        text external_id
+        text url
+    }
+
+    game_audience_stats {
+        bigint trend_id PK
+        date week_start PK
+        text source_title
+        text source_category_id
+        text source_url
+        integer position
+        bigint average_viewers
+        timestamp_with_time_zone collected_at
+    }
+
+    %% Связи
+    charts ||--o{ chart_runs : "id -> chart_id"
+    chart_runs ||--o{ trend_history : "id -> run_id"
+    
+    genres ||--o{ trend_genres : "id -> genre_id"
+    trends ||--o{ trend_genres : "id -> trend_id"
+    trends ||--o{ trend_history : "id -> trend_id"
+    genres ||--o{ trends : "id -> genre_id"
+
+    trends ||--o{ twitch_weekly_stats : "id -> trend_id"
+    trends ||--o{ trend_search_stats : "id -> trend_id"
+    trends ||--o{ trend_source_items : "id -> trend_id"
+    trends ||--o{ game_audience_stats : "id -> trend_id"
 ```
 
 ## Масштабирование

@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 from parser.vk import get_vk_chart
 from parser.vk import login as vk_login
 from parser.vk import vk_parser
-from tests.test_vk import FIRST, REMAINING
+from tests.unit.test_vk import FIRST, REMAINING
 
 SESSION = {
     "VK_USER_ID": "777",

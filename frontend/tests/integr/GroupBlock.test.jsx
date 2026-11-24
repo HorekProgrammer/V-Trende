@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import GroupBlock from '../src/components/trends/GroupBlock';
+import GroupBlock from '../../src/components/trends/GroupBlock';
 
 const mockItems = [
   { key: '1', title: 'Тренд 1', weeks: 5, categoryLabel: 'Музыка' },

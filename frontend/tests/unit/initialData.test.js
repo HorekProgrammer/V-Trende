@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { apiFailureResult, initialApiResult } from '../src/api/initialData.js';
+import { apiFailureResult, initialApiResult } from '../../src/api/initialData.js';
 
 describe('initialData (Кэш и SSR)', () => {
   it('должен возвращать встроенные данные как начальный результат', () => {

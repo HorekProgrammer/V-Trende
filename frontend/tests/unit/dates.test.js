@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatWeek, formatDate } from '../src/utils/dates';
+import { formatWeek, formatDate } from '../../src/utils/dates';
 
 describe('Функция formatWeek', () => {
   it('должна возвращать пустую строку для пустой даты', () => {
